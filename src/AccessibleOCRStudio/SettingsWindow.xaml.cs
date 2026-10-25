@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Globalization;
 using System.Windows.Media;
@@ -62,6 +62,10 @@ public partial class SettingsWindow : Window
         if (!double.TryParse(DocumentSize.Text, out var documentSize) || !double.IsFinite(documentSize) || documentSize < 10 || documentSize > 72 ||
             !double.TryParse(InterfaceSize.Text, out var interfaceSize) || !double.IsFinite(interfaceSize) || interfaceSize < 12 || interfaceSize > 32)
         { DialogGuard.Show(this, UiLanguage.T("Choose a document size from 10 to 72 and an interface size from 12 to 32.")); return; }
+        var chosenEngine = (OcrEngine.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+        var chosenLanguages = (Languages.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "eng";
+        if (chosenEngine == "paddle" && PaddleOcrService.RequiredModels(chosenLanguages, AutoRotate.IsChecked == true).Any(model => !PaddleOcrService.ModelInstalled(model)))
+        { DialogGuard.Show(this, UiLanguage.T("The selected language model is not installed. Choose an installed OCR language or rerun Custom setup to add it.")); return; }
         _s.ShowStatusBar = ShowStatusBar.IsChecked == true;
         _s.DocumentFontFamily = (DocumentFont.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Segoe UI";
         _s.DocumentFontSize = documentSize;

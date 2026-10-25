@@ -1,4 +1,4 @@
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
@@ -244,7 +244,7 @@ public partial class MainWindow : Window
     {
         if (sender is MenuItem m && m.Tag is string lang)
         {
-            _settings.OcrLanguages = lang; _settings.Save();
+            _settings.OcrLanguages = lang; _settings.Save(); SyncAccessibilityMenu();
             StatusText.Text = $"OCR language profile set to {m.Header}.";
         }
     }
@@ -347,6 +347,16 @@ public partial class MainWindow : Window
 
     private void SyncAccessibilityMenu()
     {
+        void MarkLanguages(ItemsControl parent)
+        {
+            foreach (var item in parent.Items.OfType<MenuItem>())
+            {
+                if (item.Tag is string profile && new[] { "ara", "eng", "fra", "ara+eng", "ara+fra", "eng+fra", "ara+eng+fra" }.Contains(profile))
+                { item.IsCheckable = true; item.IsChecked = profile == _settings.OcrLanguages; }
+                if (item.HasItems) MarkLanguages(item);
+            }
+        }
+        MarkLanguages(ApplicationMenu);
         System.Windows.Automation.AutomationProperties.SetLiveSetting(StatusText, _settings.AnnounceOcrProgress ? System.Windows.Automation.AutomationLiveSetting.Polite : System.Windows.Automation.AutomationLiveSetting.Off);
         StatusText.Language = System.Windows.Markup.XmlLanguage.GetLanguage(ExperienceMessages.Language(_settings.MessageLanguage));
         // UI Automation and system contrast remain available to every user.
@@ -391,11 +401,8 @@ public partial class MainWindow : Window
             ApplicationMenu.IsEnabled = false;
             if (!await ConfirmUnsavedTextAsync()) return;
             StatusText.Text = UiLanguage.T("Installing update.");
-            var start = new ProcessStartInfo(installer) { UseShellExecute = true, Verb = "runas" };
-            start.ArgumentList.Add("/SILENT");
-            start.ArgumentList.Add("/NORESTART");
-            start.ArgumentList.Add("/NOCLOSEAPPLICATIONS");
-            start.ArgumentList.Add("/DIR=" + AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar));
+            var start = UpdateInstaller.CreateStartInfo(installer, AppContext.BaseDirectory,
+                UpdateInstaller.IsCurrentUserInstall(AppContext.BaseDirectory));
             if (Process.Start(start) is null) throw new IOException("The installer could not be started.");
             _allowClose = true;
             Close();

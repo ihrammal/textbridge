@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 
 namespace AccessibleOCRStudio;
 
@@ -19,13 +19,16 @@ internal static class DialogGuard
         MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.None,
         MessageBoxResult defaultResult = MessageBoxResult.OK)
     {
-        if (!TryEnter()) return Absorb(buttons);
+        // A validation prompt owned by the current modal dialog is necessary
+        // feedback; a competing prompt owned by the disabled main window is not.
+        var ownedPrompt = _active && owner.Owner is not null && owner.IsActive;
+        if (!ownedPrompt && !TryEnter()) return Absorb(buttons);
         try
         {
             if (Services.UiLanguage.IsArabic) return ShowArabic(owner, text, caption, buttons, defaultResult);
             return MessageBox.Show(owner, text, caption, buttons, image, defaultResult);
         }
-        finally { Exit(); }
+        finally { if (!ownedPrompt) Exit(); }
     }
 
     public static bool? ShowDialog(Window dialog)
