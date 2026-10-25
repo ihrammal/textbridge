@@ -27,7 +27,7 @@ foreach ($machineRegistry in @("HKLM:\Software\Microsoft\Windows\CurrentVersion\
     if (Test-Path $machineRegistry) { throw 'An installation with this identity already exists. Use the separate QA package.' }
 }
 function Install-App($Log) {
-    $Components = if ($WindowsOnly) { '' } else { 'paddle' }
+    $Components = if ($WindowsOnly) { '' } else { 'paddle,paddle\arabic,paddle\english,paddle\french' }
     $process = Start-Process -FilePath $Installer -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART $InstallScope /NOICONS /COMPONENTS=`"$Components`" /DIR=`"$TestRoot`" /LOG=`"$Log`"" -WindowStyle Hidden -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "Installation failed: $($process.ExitCode). See $Log" }
 }
@@ -39,7 +39,7 @@ try {
         if (-not (Test-Path (Join-Path $TestRoot $file))) { throw "Installed package is missing $file" }
     }
     if ($WindowsOnly -and (Test-Path -LiteralPath (Join-Path $TestRoot 'paddle'))) { throw 'Windows-only installation contains the optional Paddle component.' }
-    $ExpectedEngine = if ($WindowsOnly) { 'windows' } else { 'paddle' }
+    $ExpectedEngine = if ($WindowsOnly) { 'windows' } else { 'paddle,paddle\arabic,paddle\english,paddle\french' }
     if ((Get-Content (Join-Path $TestRoot 'ocr-engine.txt') -Raw).Trim() -ne $ExpectedEngine) { throw 'Installed OCR default differs from selected components.' }
     if (-not (Test-Path $RegistryPath)) { throw 'Installer registration is missing for the requested scope.' }
     Write-Output "PASS: $ScopeName installation includes application, OCR, PDF, preprocessing and help files and correct registration."
