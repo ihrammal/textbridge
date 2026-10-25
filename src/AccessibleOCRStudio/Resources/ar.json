@@ -279,5 +279,6 @@
   "X": "إكس",
   "TikTok": "تيك توك",
   "Email": "البريد الإلكتروني",
-  "Author and contact information": "معلومات المؤلف والتواصل"
+  "Author and contact information": "معلومات المؤلف والتواصل",
+  "The selected language model is not installed. Choose an installed OCR language or rerun Custom setup to add it.": "نموذج اللغة المحدد غير مثبت. اختر لغة مثبتة أو أعد تشغيل التثبيت المخصص لإضافته."
 }
