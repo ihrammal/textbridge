@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -49,16 +49,18 @@ public sealed class UpdateService
         try
         {
             if (!IsHttps(feedUrl)) throw new InvalidDataException("The update feed must use HTTPS.");
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(25));
             using var request = new HttpRequestMessage(HttpMethod.Get, feedUrl);
             request.Headers.UserAgent.Add(new ProductInfoHeaderValue("TextBridge", currentVersion));
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            using var response = await _http.SendAsync(request, cancellationToken);
+            using var response = await _http.SendAsync(request, timeout.Token);
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound &&
                 new Uri(feedUrl).Host == "api.github.com" && new Uri(feedUrl).AbsolutePath.EndsWith("/releases/latest", StringComparison.Ordinal))
                 return new(true, false, currentVersion, null, null, UiLanguage.T("No stable update has been published yet. You can continue using your current version."));
             response.EnsureSuccessStatusCode();
             if (!IsHttps(response.RequestMessage?.RequestUri?.AbsoluteUri)) throw new InvalidDataException("Insecure update redirect.");
-            return Parse(await response.Content.ReadAsStringAsync(cancellationToken), currentVersion);
+            return Parse(await response.Content.ReadAsStringAsync(timeout.Token), currentVersion);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)

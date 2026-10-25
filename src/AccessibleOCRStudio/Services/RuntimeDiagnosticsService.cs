@@ -1,4 +1,4 @@
-namespace AccessibleOCRStudio.Services;
+﻿namespace AccessibleOCRStudio.Services;
 
 public sealed record RuntimeDiagnosticResult(bool CoreOcrReady, string Summary, string Details);
 
@@ -33,7 +33,7 @@ public sealed class RuntimeDiagnosticsService
         Add("PDF page information", Path.Combine("pdf","pdfinfo.exe"), "pdfinfo.exe");
         Add("PDF merger", Path.Combine("pdf","pdfunite.exe"), "pdfunite.exe");
         Add("Image preprocessing", Path.Combine("image", "magick.exe"), "magick.exe");
-        foreach (var model in selected=="paddle" ? new[] { "PP-OCRv5_mobile_det", "arabic_PP-OCRv5_mobile_rec", "en_PP-OCRv5_mobile_rec", "latin_PP-OCRv5_mobile_rec", "PP-LCNet_x1_0_doc_ori" } : Array.Empty<string>())
+        foreach (var model in selected=="paddle" ? PaddleOcrService.RequiredModels(settings.OcrLanguages, settings.AutoRotate) : Array.Empty<string>())
         {
             var directory = Path.Combine(baseDir,"paddle","models",model);
             items.Add(($"OCR model {model}", File.Exists(Path.Combine(directory,"inference.json")) && File.Exists(Path.Combine(directory,"inference.pdiparams")), directory));

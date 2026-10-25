@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -32,8 +32,30 @@ public sealed class PaddleOcrService
     private static Process? worker;
     static PaddleOcrService() => AppDomain.CurrentDomain.ProcessExit += (_, _) => StopWorker();
 
+    internal static string[] RequiredModels(string languages, bool rotate)
+    {
+        var profiles = languages.Split('+');
+        var models = new List<string> { "PP-OCRv5_mobile_det" };
+        if (profiles.Contains("ara")) models.Add("arabic_PP-OCRv5_mobile_rec");
+        if (profiles.Contains("fra")) models.Add("latin_PP-OCRv5_mobile_rec");
+        else if (profiles.Contains("eng")) models.Add("en_PP-OCRv5_mobile_rec");
+        if (rotate) models.Add("PP-LCNet_x1_0_doc_ori");
+        return models.ToArray();
+    }
+
+    internal static bool ModelInstalled(string model, string? root = null) =>
+        File.Exists(Path.Combine(root ?? AppContext.BaseDirectory, "paddle", "models", model, "inference.json")) &&
+        File.Exists(Path.Combine(root ?? AppContext.BaseDirectory, "paddle", "models", model, "inference.pdiparams"));
+
+    internal static string[] InstalledProfiles(string? root = null) => new[] {
+        ("ara", "arabic_PP-OCRv5_mobile_rec"), ("eng", "en_PP-OCRv5_mobile_rec"), ("fra", "latin_PP-OCRv5_mobile_rec")
+    }.Where(item => ModelInstalled(item.Item2, root)).Select(item => item.Item1).ToArray();
+
     public async Task<OcrPageResult> RecognizeAsync(string image, AppSettings settings)
     {
+        var missing = RequiredModels(settings.OcrLanguages, settings.AutoRotate).Where(model => !ModelInstalled(model)).ToArray();
+        if (missing.Length > 0)
+            throw new InvalidOperationException(UiLanguage.T("The selected language model is not installed. Choose an installed OCR language or rerun Custom setup to add it."));
         var response = await RequestAsync(new { image = Path.GetFullPath(image), languages = settings.OcrLanguages, rotate = settings.AutoRotate, preserveLayout = settings.PreserveTextLayout });
         return response.Deserialize<OcrPageResult>(Json) ?? throw new InvalidOperationException("The offline OCR engine returned no result.");
     }
