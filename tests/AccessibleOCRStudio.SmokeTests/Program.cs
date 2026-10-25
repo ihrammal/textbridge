@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Globalization;
 using System.Reflection;
 using System.Windows;
@@ -72,7 +72,7 @@ internal static class Program
             { WindowsOcrChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
             if (args.Contains("--accessibility-checks-only"))
             { AccessibilityChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
-            if (!args.Contains("--api-checks-only")) { AccessibilityChecks.Run(temp, Check); RevisionChecks.Run(temp, Check); Run(temp); PaddleChecks.Run(temp, Check); WindowsOcrChecks.Run(temp, Check); }
+            if (!args.Contains("--api-checks-only")) { AuthorInformationChecks.Run(Check); AccessibilityChecks.Run(temp, Check); RevisionChecks.Run(temp, Check); Run(temp); PaddleChecks.Run(temp, Check); WindowsOcrChecks.Run(temp, Check); }
             OpenAiChecks.Run(temp, Check);
             ProviderChecks.Run(temp, Check);
             Console.WriteLine($"All {passed} checks passed.");
