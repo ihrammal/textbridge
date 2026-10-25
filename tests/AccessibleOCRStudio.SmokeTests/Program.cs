@@ -56,6 +56,12 @@ internal static class Program
             Console.WriteLine("Prepared synthetic UI test fixtures.");
             return 0;
         }
+        if (args.Contains("--author-checks-only"))
+        {
+            AuthorInformationChecks.Run(Check);
+            Console.WriteLine($"All {passed} author-information checks passed.");
+            return 0;
+        }
         var temp = Path.Combine(Path.GetTempPath(), "AOS-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         try

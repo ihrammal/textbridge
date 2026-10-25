@@ -266,5 +266,18 @@
   "Windows OCR works offline with installed Windows language packs. Recognition confidence is unavailable.": "يعمل محرك Windows دون إنترنت باستخدام حزم اللغات المثبّتة في النظام. لا يوفّر تقديراً للثقة في الاستخراج.",
   "PaddleOCR works offline with its bundled language models. The first recognition may take longer.": "يعمل PaddleOCR دون إنترنت باستخدام نماذج اللغات المضمّنة. قد يستغرق الاستخراج الأول وقتاً أطول.",
   "Arabic + French": "العربية والفرنسية",
-  "English + French": "الإنجليزية والفرنسية"
+  "English + French": "الإنجليزية والفرنسية",
+  "Braille Training Specialist": "أخصائي تدريب على برايل",
+  "NVDA Certified Expert": "خبير NVDA معتمد",
+  "Microsoft Word with NVDA Certified Expert": "خبير معتمد في Microsoft Word باستخدام NVDA",
+  "JAWS Certified": "حاصل على شهادة JAWS",
+  "Assistive technology trainer": "مدرّب تقنيات مساعدة",
+  "Translator / interpreter": "مترجم ومترجم فوري",
+  "YouTube": "يوتيوب",
+  "Telegram": "تيليجرام",
+  "Facebook": "فيسبوك",
+  "X": "إكس",
+  "TikTok": "تيك توك",
+  "Email": "البريد الإلكتروني",
+  "Author and contact information": "معلومات المؤلف والتواصل"
 }

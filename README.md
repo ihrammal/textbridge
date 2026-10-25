@@ -70,3 +70,22 @@ status of this local revision.
 
 TextBridge was previously named Clear Read. Existing settings and protected API keys
 are migrated automatically. The GitHub repository address remains unchanged.
+
+## Author
+
+Iman Rammal
+
+- Braille Training Specialist
+- NVDA Certified Expert
+- Microsoft Word with NVDA Certified Expert
+- JAWS Certified
+- Assistive technology trainer
+- Translator / interpreter
+
+Email: iman.rammal@gmail.com
+
+- YouTube: https://www.youtube.com/@ihrammal
+- Telegram: https://t.me/ihrammal
+- Facebook: https://www.facebook.com/ihrammal
+- X: https://x.com/ihrammal
+- TikTok: https://tiktok.com/ihrammal

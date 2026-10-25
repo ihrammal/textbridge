@@ -579,7 +579,7 @@ public partial class MainWindow : Window
         else if (e.Key == Key.F4) { NextLowConfidence_Click(sender, e); e.Handled = true; }
     }
 
-    private void About_Click(object s, RoutedEventArgs e) => DialogGuard.Show(this, "TextBridge " + AppVersion + "\n" + UiLanguage.T("Accessible text recognition for Windows") + "\n" + UiLanguage.T("Free for noncommercial use. Commercial use requires permission.") + "\n" + UiLanguage.T("By Iman Rammal"), "About TextBridge");
+    private void About_Click(object s, RoutedEventArgs e) => ShowDialogReturningFocus(new AuthorInformationWindow { Owner = this });
     private void OpenDoc(string rel) { if (UiLanguage.IsArabic) rel = rel.Replace("help/", "help/ar/"); var p = System.IO.Path.Combine(AppContext.BaseDirectory, rel); if (System.IO.File.Exists(p)) Process.Start(new ProcessStartInfo(p) { UseShellExecute = true }); else DialogGuard.Show(this, "Help file is not installed yet."); }
     private async void Exit_Click(object s, RoutedEventArgs e) { await CloseWithFarewellAsync(); }
     private async void Window_Closing(object? s, CancelEventArgs e) { if (_allowClose) return; e.Cancel = true; await CloseWithFarewellAsync(); }
