@@ -1,4 +1,4 @@
-param([switch]$TestInstall)
+﻿param([switch]$TestInstall, [switch]$SelectiveInstall)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $Compiler = Join-Path $Root '.tools\inno\ISCC.exe'
@@ -11,7 +11,8 @@ if (-not (Test-Path $Compiler)) {
 }
  if (-not (Test-Path (Join-Path $Root 'publish\TextBridge.exe'))) { throw 'Build the app with build-windows.ps1 first.' }
 $Arguments = @('/Qp')
-if ($TestInstall) { $Arguments += '/DTestInstall' }
+if ($TestInstall -or $SelectiveInstall) { $Arguments += '/DTestInstall' }
+if ($SelectiveInstall) { $Arguments += '/DSelectiveInstall' }
 $Arguments += Join-Path $Root 'installer\AccessibleOCRStudio.iss'
 & $Compiler @Arguments
 if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }

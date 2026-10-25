@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace AccessibleOCRStudio.Services;
 
@@ -86,6 +86,11 @@ public sealed class AppSettings
             {
                 var profiles=WindowsOcrService.AvailableProfiles;
                 if(profiles.Count>0)settings.OcrLanguages=string.Join("+",profiles);
+            }
+            if (OcrBackendService.ResolveEngine(settings) == "paddle")
+            {
+                var profiles = PaddleOcrService.InstalledProfiles();
+                if (profiles.Length > 0) settings.OcrLanguages = string.Join("+", profiles);
             }
             return settings;
         }

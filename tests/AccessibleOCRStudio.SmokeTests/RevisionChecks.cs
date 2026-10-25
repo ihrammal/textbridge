@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -16,6 +16,15 @@ internal static class RevisionChecks
 {
     internal static void Run(string temp, Action<bool,string> check)
     {
+        check(PaddleOcrService.RequiredModels("ara", false).SequenceEqual(new[] { "PP-OCRv5_mobile_det", "arabic_PP-OCRv5_mobile_rec" }), "Arabic-only setup needs no English or French model");
+        check(PaddleOcrService.RequiredModels("eng+fra", true).SequenceEqual(new[] { "PP-OCRv5_mobile_det", "latin_PP-OCRv5_mobile_rec", "PP-LCNet_x1_0_doc_ori" }), "French combined recognition uses the Latin model and optional orientation model");
+        var modelRoot = Path.Combine(temp, "partial-models");
+        var modelDir = Path.Combine(modelRoot, "paddle", "models", "en_PP-OCRv5_mobile_rec");
+        Directory.CreateDirectory(modelDir);
+        File.WriteAllText(Path.Combine(modelDir, "inference.json"), "{}");
+        check(PaddleOcrService.InstalledProfiles(modelRoot).Length == 0, "Incomplete language model is never offered as installed");
+        File.WriteAllText(Path.Combine(modelDir, "inference.pdiparams"), "fixture");
+        check(PaddleOcrService.InstalledProfiles(modelRoot).SequenceEqual(new[] { "eng" }), "Custom English-only installation reports exactly its installed language");
         var clearRead = Path.Combine(temp, "Clear Read");
         var textBridge = Path.Combine(temp, "TextBridge");
         Directory.CreateDirectory(clearRead);
@@ -68,6 +77,10 @@ internal static class RevisionChecks
         check(((MenuItem)menu.Items[0]).Header?.ToString() == "_File" && window.FlowDirection == FlowDirection.LeftToRight, "Interface switches back to English without restarting");
         var top = menu.Items.OfType<MenuItem>().Select(i => i.Header.ToString()).ToList();
         check(top.Distinct().Count() == top.Count && !top.Contains("E_xport") && !top.Contains("_Accessibility") && top.Contains("_Settings"), "Export and accessibility commands have a single menu location");
+        var recognize = menu.Items.OfType<MenuItem>().Single(item => item.Header.ToString() == "_Recognize");
+        var languageMenu = recognize.Items.OfType<MenuItem>().Single(item => item.HasItems);
+        check(languageMenu.Items.OfType<MenuItem>().Select(item => item.Tag?.ToString()).Distinct().Count() == 7,
+            "Recognize menu offers every Settings language combination without duplicates");
         var repeated = new RecognitionDocument { PlainText = "test test test" };
         repeated.Words.Add(new OcrWord("test", 95, 1, 1, 0, 0, 1, 1));
         repeated.Words.Add(new OcrWord("test", 20, 1, 1, 0, 0, 1, 1));
@@ -116,6 +129,15 @@ internal static class RevisionChecks
     }
     private static async Task UpdateChecks(string temp, Action<bool,string> check)
     {
+        var userUpdate = UpdateInstaller.CreateStartInfo("installer.exe", temp, true);
+        var adminUpdate = UpdateInstaller.CreateStartInfo("installer.exe", temp, false);
+        check(userUpdate.ArgumentList.Contains("/CURRENTUSER") && userUpdate.Verb != "runas" && !userUpdate.ArgumentList.Contains("/ALLUSERS"), "Per-user updates preserve scope without forcing administrator elevation");
+        check(adminUpdate.ArgumentList.Contains("/ALLUSERS") && adminUpdate.Verb == "runas" && adminUpdate.ArgumentList.Contains("/NORESTART"), "Machine-wide updates request elevation and never restart Windows");
+        var releaseJson = System.Text.Json.JsonSerializer.Serialize(new { tag_name = "v1.1.1", draft = false, prerelease = false,
+            assets = new[] { new { name = "TextBridge-Setup-1.1.1.exe", browser_download_url = "https://github.com/ihrammal/textbridge/releases/download/v1.1.1/TextBridge-Setup-1.1.1.exe", digest = "sha256:" + new string('a', 64) } } });
+        var releaseUpdate = UpdateService.Parse(releaseJson, "1.1.0");
+        check(releaseUpdate.UpdateAvailable && releaseUpdate.LatestVersion == "1.1.1" && releaseUpdate.InstallerUrl!.EndsWith("TextBridge-Setup-1.1.1.exe"), "Installed 1.1.0 clients detect the 1.1.1 GitHub installer and digest");
+        check(!UpdateService.Parse(releaseJson.Replace("\"prerelease\":false", "\"prerelease\":true"), "1.1.0").UpdateAvailable, "Startup updater never offers a preview release");
         var bytes=Encoding.UTF8.GetBytes("verified test payload, never executed");
         var hash=Convert.ToHexString(SHA256.HashData(bytes));
         var json=System.Text.Json.JsonSerializer.Serialize(new {version="1.0.2",installerUrl="https://updates.example/installer.exe",sha256=hash});
