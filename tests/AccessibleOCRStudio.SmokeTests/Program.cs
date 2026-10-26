@@ -66,6 +66,27 @@ internal static class Program
         Directory.CreateDirectory(temp);
         try
         {
+            if (args.Contains("--long-native-checks-only"))
+            {
+                const int pages = 212;
+                var one = Path.Combine(temp, "native.pdf");
+                var longPdf = Path.Combine(temp, "long.pdf");
+                MakeHybridPdf(one, null);
+                RunTool(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe"), Enumerable.Repeat(one, pages).Append(longPdf).ToArray());
+                var events = new List<OcrProgress>();
+                var result = new LocalOcrService().RecognizeAsync(longPdf, new AppSettings { OcrLanguages = "eng", PreferDigitalPdfText = true },
+                    updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(events.Add), includePageHeadings: true).GetAwaiter().GetResult();
+                var delivered = events.Where(update => update.TextChunk is not null).ToArray();
+                Check(delivered.Length == pages && delivered.Select(update => update.Page).SequenceEqual(Enumerable.Range(1, pages)),
+                    "A 212-page PDF delivers every page in order without a short-document cutoff");
+                Check(delivered.All(update => update.TotalPages == pages) && delivered.Last().Percent == 100,
+                    "Long-document progress uses the PDF's actual page total and reaches 100 percent");
+                Check(string.Concat(delivered.Select(update => update.TextChunk)) == result && result.Contains("--- Page 212 of 212 ---"),
+                    "All streamed pages of a long document are retained exactly once in the final text");
+                Check(!events.Any(update => update.Stage == OcrStage.Rendering),
+                    "A long native-text PDF stays page-based and does not rasterize the document");
+                Console.WriteLine($"All {passed} long-document checks passed."); return 0;
+            }
             if (args.Contains("--recognition-ui-checks-only"))
             {
                 var one = Path.Combine(temp, "native.pdf");

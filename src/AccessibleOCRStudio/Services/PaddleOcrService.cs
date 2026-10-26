@@ -89,7 +89,7 @@ public sealed class PaddleOcrService
             }
             await worker.StandardInput.WriteLineAsync(JsonSerializer.Serialize(request));
             await worker.StandardInput.FlushAsync();
-            var line = await worker.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromMinutes(5), cancellationToken);
+            var line = await worker.StandardOutput.ReadLineAsync().WaitAsync(cancellationToken);
             if (line is null) throw new InvalidOperationException("The offline OCR engine stopped unexpectedly. Try again or reinstall TextBridge.");
             using var response = JsonDocument.Parse(line);
             if (!response.RootElement.GetProperty("ok").GetBoolean())
@@ -97,11 +97,6 @@ public sealed class PaddleOcrService
             return response.RootElement.GetProperty("result").Clone();
         }
         catch (OperationCanceledException) { StopWorker(); throw; }
-        catch (TimeoutException)
-        {
-            StopWorker();
-            throw new InvalidOperationException("Offline OCR took too long. Try a smaller image or fewer pages.");
-        }
         catch (Exception exception) when (exception is IOException or JsonException)
         {
             StopWorker();

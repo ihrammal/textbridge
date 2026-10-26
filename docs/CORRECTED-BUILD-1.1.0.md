@@ -26,3 +26,26 @@ installer/LICENSE.txt. Matching accessible HTML pages are in help/ and help/ar/.
 Existing noncommercial restrictions, third-party rights, prior MIT rights and the
 English-reference clause remain. Added explanations describe actual OCR, online
 correction and update behaviour; they do not promise error-free recognition.
+
+
+## Long-document processing
+
+There is no fixed PDF page-count or overall recognition-duration cutoff. The
+old five-minute timeout applied to a single Paddle request, not an entire PDF;
+it has been removed now that the user can explicitly cancel an active request.
+Worker exit/protocol errors still produce actionable errors and retain already
+completed editor pages. Cancellation interrupts PDF tools, preprocessing and
+both OCR engines. PDF inspection/rendering is page-scoped, with temporary raster
+files removed as each page finishes.
+
+The bundled PP-OCRv5 mobile detector's own inference configuration uses a
+960-pixel long edge. The worker now explicitly sets text_det_limit_side_len=960
+and text_det_limit_type=max, avoiding the generic pipeline's minimum-side
+configuration retaining full 300-DPI page dimensions for detection. Recognition
+continues on original-resolution crops; existing Arabic/English/French content,
+confidence geometry and hybrid-PDF regression checks must pass with this setting.
+
+The four-minute cutoff in the initial owner-PDF diagnostic was a test-only
+cancellation guard. The subsequent full 59-page audit has no such cutoff. This
+must not be described as an application limit or a completed whole-file test
+until its final completion record is observed.
