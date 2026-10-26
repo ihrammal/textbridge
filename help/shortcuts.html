@@ -1,3 +1,41 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>TextBridge Keyboard Shortcuts</title><body><main><h1>Keyboard Shortcuts</h1><h2>File commands</h2><p><strong>Ctrl+O</strong>: Open a document.</p><p><strong>Ctrl+S</strong>: Save recognized text.</p><p><strong>Ctrl+E</strong>: Export an accessible Word document.</p><p><strong>Ctrl+Shift+S</strong>: Save text as a new file.</p><h2>Editing and navigation</h2><p><strong>Alt</strong>: Enter the menu bar; press Alt again to leave and return to the previous control. Use arrows and Enter to navigate menus. Tab stays in the menu bar. Escape closes one submenu level at a time; Alt or F10 leaves menu navigation.</p><p><strong>Ctrl+A</strong>: Select all document text.</p><p><strong>Ctrl+X</strong>: Cut selected text.</p><p><strong>Ctrl+C</strong>: Copy selected text.</p><p><strong>Ctrl+V</strong>: Paste into the document.</p><p><strong>Ctrl+F</strong>: Find text.</p><p><strong>Ctrl+H</strong>: Replace text.</p><p><strong>Ctrl+,</strong>: Open Preferences.</p><p><strong>F6</strong>: Focus the document without changing the selection.</p><p><strong>Shift+F6</strong>: Focus the current status message for screen-reader review. Press F6 to return to the document.</p><h2>OCR commands</h2><p><strong>Ctrl+R</strong>: Recognize the current document.</p><h2>Review commands</h2><p><strong>F4</strong>: Next low-confidence text.</p><p><strong>Shift+F4</strong>: Previous low-confidence text.</p><h2>Help</h2><p><strong>F1</strong>: Open help.</p></main></body></html>
-
-
+<!doctype html>
+<html lang="en" dir="ltr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Keyboard Shortcuts — TextBridge</title><link rel="stylesheet" href="help.css"></head>
+<body><a class="skip" href="#main">Skip to content</a>
+<header><p><strong>TextBridge 1.1.0</strong> — Offline help</p><p class="language"><a href="ar/shortcuts.html" lang="ar" hreflang="ar">العربية — هذه الصفحة</a></p></header>
+<nav aria-label="Help topics"><ul><li><a href="index.html">Help contents</a></li>
+<li><a href="shortcuts.html" aria-current="page">Keyboard shortcuts</a></li>
+<li><a href="accessibility.html">Accessibility</a></li>
+<li><a href="offline-and-api.html">Offline OCR and privacy</a></li>
+<li><a href="troubleshooting.html">Troubleshooting</a></li>
+<li><a href="report-problem.html">Report a problem</a></li>
+<li><a href="contact.html">Author and contact</a></li></ul></nav>
+<main id="main" tabindex="-1"><h1>Keyboard Shortcuts</h1>
+<p>Use these keys in the main TextBridge window unless a dialog is specified. Open this page from Help &gt; Keyboard Shortcuts. Combinations containing Ctrl or Alt use the named modifier, not your screen-reader modifier.</p><h2 id="files">File and recognition</h2><div class="table-wrap"><table><caption>File and recognition</caption><thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead><tbody><tr><th scope="row"><kbd>Ctrl+O</kbd></th><td>Open an image or PDF.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+R</kbd></th><td>Recognize the current source document.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+S</kbd></th><td>Save editor text as UTF-8 text.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+Shift+S</kbd></th><td>Save editor text with a new name or location.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+E</kbd></th><td>Export an accessible Word document directly.</td></tr></tbody></table></div>
+<h2 id="editing">Editing text</h2><div class="table-wrap"><table><caption>Editing text</caption><thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead><tbody><tr><th scope="row"><kbd>Ctrl+A</kbd></th><td>Select all editor text.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+X</kbd></th><td>Cut the selected text.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+C</kbd></th><td>Copy the selected text.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+V</kbd></th><td>Paste at the insertion point.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+Z</kbd></th><td>Undo an edit.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+Y</kbd></th><td>Redo an edit when available.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+F</kbd></th><td>Open Find. Enter finds the next match.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+H</kbd></th><td>Open Find and Replace.</td></tr></tbody></table></div>
+<h2 id="review">Reviewing recognition</h2><div class="table-wrap"><table><caption>Reviewing recognition</caption><thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead><tbody><tr><th scope="row"><kbd>F4</kbd></th><td>Next low-confidence word or Arabic line, when available.</td></tr>
+<tr><th scope="row"><kbd>Shift+F4</kbd></th><td>Previous low-confidence text, when available.</td></tr></tbody></table></div>
+<h2 id="navigation">Navigation, settings and help</h2><div class="table-wrap"><table><caption>Navigation, settings and help</caption><thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead><tbody><tr><th scope="row"><kbd>Ctrl+,</kbd></th><td>Open App settings.</td></tr>
+<tr><th scope="row"><kbd>F6</kbd></th><td>Focus editor text without changing the selection.</td></tr>
+<tr><th scope="row"><kbd>Shift+F6</kbd></th><td>Focus the status message; if the bar is hidden, show it in a dialog.</td></tr>
+<tr><th scope="row"><kbd>F1</kbd></th><td>Open local Help contents in your default browser.</td></tr>
+<tr><th scope="row"><kbd>Alt / F10</kbd></th><td>Enter or leave the menu bar and return to the previous control.</td></tr>
+<tr><th scope="row"><kbd>Escape</kbd></th><td>Close one submenu level; close a cancellable dialog.</td></tr>
+<tr><th scope="row"><kbd>Alt+F4</kbd></th><td>Close the current window; unsaved work prompts before closing the editor.</td></tr>
+<tr><th scope="row"><kbd>Tab / Shift+Tab</kbd></th><td>Move forward/backward through dialog controls. In the main window, move between editor and visible status.</td></tr>
+<tr><th scope="row"><kbd>Ctrl+Tab / Ctrl+Shift+Tab</kbd></th><td>Switch settings tabs while focus is in the settings tab control.</td></tr></tbody></table></div>
+<h2 id="menus">Menus without a mouse</h2><p>Press Alt or F10, use Left/Right to choose a top-level menu, then Down/Up and Enter. Tab stays in menu navigation. Escape closes one submenu level; Alt or F10 exits the menu chain. In the English interface, Alt+H opens Help; K opens Keyboard Shortcuts and P opens Report a Problem. Arabic menu access letters differ; Alt and the arrow keys work in either language.</p>
+<h2 id="other-commands">Commands available through menus</h2><p>Open Multiple Files, HTML/Markdown/searchable PDF export, the OCR language profile, online correction/cancellation, review dialog, reading appearance and runtime diagnostics are menu commands without dedicated application shortcuts. Ctrl+E always opens Word export; it does not open the Export submenu.</p>
+<h2 id="readers">Screen-reader keys</h2><p>Use your screen reader's usual reading commands inside the editor. TextBridge does not assign Insert, Caps Lock or the Windows key as application shortcuts. If a command is intercepted, consult your screen reader's keyboard help. F4 review depends on confidence: Windows OCR has no confidence scores, so review its text directly.</p>
+</main><footer><p>By Iman Rammal. Free for noncommercial use; commercial use requires prior permission.</p></footer></body></html>

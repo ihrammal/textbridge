@@ -368,6 +368,8 @@ public partial class MainWindow : Window
     private string SuggestedName(string ext) => (_currentFile is null ? "recognized-document" : System.IO.Path.GetFileNameWithoutExtension(_currentFile)) + "." + ext;
     private void Help_Click(object s, RoutedEventArgs e) => OpenDoc("help/index.html");
     private void Shortcuts_Click(object s, RoutedEventArgs e) => OpenDoc("help/shortcuts.html");
+    private void OfflineHelp_Click(object s, RoutedEventArgs e) => OpenDoc("help/offline-and-api.html");
+    private void TroubleshootingHelp_Click(object s, RoutedEventArgs e) => OpenDoc("help/troubleshooting.html");
     private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await UpdateApplicationAsync(true);
 
     private async Task UpdateApplicationAsync(bool showResult)
@@ -492,6 +494,14 @@ public partial class MainWindow : Window
         { UiLanguage.Configure(_settings); UiLanguage.Apply(this); SyncAccessibilityMenu(); }
     }
 
+    private void AccessibilitySettings_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new SettingsWindow(_settings) { Owner = this };
+        window.OpenAccessibility();
+        if (ShowDialogReturningFocus(window) == true)
+        { UiLanguage.Configure(_settings); UiLanguage.Apply(this); SyncAccessibilityMenu(); }
+    }
+
     private bool IsMenuActive => ApplicationMenu.IsKeyboardFocusWithin ||
         ApplicationMenu.Items.OfType<MenuItem>().Any(item => item.IsSubmenuOpen);
 
@@ -587,7 +597,16 @@ public partial class MainWindow : Window
     }
 
     private void About_Click(object s, RoutedEventArgs e) => ShowDialogReturningFocus(new AuthorInformationWindow { Owner = this });
-    private void OpenDoc(string rel) { if (UiLanguage.IsArabic) rel = rel.Replace("help/", "help/ar/"); var p = System.IO.Path.Combine(AppContext.BaseDirectory, rel); if (System.IO.File.Exists(p)) Process.Start(new ProcessStartInfo(p) { UseShellExecute = true }); else DialogGuard.Show(this, "Help file is not installed yet."); }
+    private void OpenDoc(string rel)
+    {
+        if (UiLanguage.IsArabic) rel = rel.Replace("help/", "help/ar/");
+        var path = System.IO.Path.Combine(AppContext.BaseDirectory, rel);
+        if (!System.IO.File.Exists(path))
+        { DialogGuard.Show(this, UiLanguage.T("Help file is not installed yet.")); return; }
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+        catch (Exception)
+        { DialogGuard.Show(this, UiLanguage.T("The help page could not be opened. Open the help folder beside TextBridge.exe and choose index.html."), UiLanguage.T("Help Contents"), MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
     private async void Exit_Click(object s, RoutedEventArgs e) { await CloseWithFarewellAsync(); }
     private async void Window_Closing(object? s, CancelEventArgs e) { if (_allowClose) return; e.Cancel = true; await CloseWithFarewellAsync(); }
     private async Task<bool> ConfirmUnsavedTextAsync()

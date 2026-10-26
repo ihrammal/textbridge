@@ -49,10 +49,21 @@ internal static class AccessibilityChecks
         check(!restored.ShowStatusBar && restored.DocumentFontFamily == "Tahoma" && restored.DocumentFontSize == 32 && restored.DocumentBold,
             "Status visibility and low-vision preferences survive saving and reloading");
         var preferences = new SettingsWindow(settings);
+        preferences.OpenAccessibility();
+        check(((TabControl)preferences.FindName("Tabs")).Items.Count == 4 &&
+            ((TabControl)preferences.FindName("Tabs")).SelectedItem == preferences.FindName("AccessibilityTab") &&
+            preferences.FindName("ScreenReaderGroup") is GroupBox && preferences.FindName("LowVisionGroup") is GroupBox &&
+            preferences.FindName("SoundsGroup") is GroupBox,
+            "A single Accessibility tab contains screen-reader, low-vision and sound groups");
+        var engine = (ComboBox)preferences.FindName("OcrEngine");
+        engine.SelectedItem = engine.Items.OfType<ComboBoxItem>().First(item => (string?)item.Tag == "windows");
+        check(System.Windows.Automation.AutomationProperties.GetHelpText(engine).Contains("confidence is unavailable") &&
+            System.Windows.Automation.AutomationProperties.GetLiveSetting((TextBlock)preferences.FindName("EngineHint")) == System.Windows.Automation.AutomationLiveSetting.Polite,
+            "Changing OCR engine exposes its limitations as help text and a polite announcement");
         preferences.OpenLowVision();
-        check(((TabControl)preferences.FindName("Tabs")).SelectedItem == preferences.FindName("LowVisionTab") &&
+        check(((TabControl)preferences.FindName("Tabs")).SelectedItem == preferences.FindName("AccessibilityTab") &&
             ((ComboBox)preferences.FindName("ReadingColors")).Items.Count == 5 &&
-            ((ComboBox)preferences.FindName("DocumentSize")).Text == "32", "Reading appearance opens the low-vision controls with the saved values");
+            ((ComboBox)preferences.FindName("DocumentSize")).Text == "32", "Reading appearance opens the shared Accessibility tab with saved low-vision values");
         check(((CheckBox)preferences.FindName("CheckUpdates")).Content.ToString()!.Contains("TextBridge") &&
             !((CheckBox)preferences.FindName("CheckUpdates")).Content.ToString()!.Contains("Clear Read"),
             "Update settings display TextBridge rather than the former product name");
@@ -91,7 +102,7 @@ internal static class AccessibilityChecks
         check(!file.IsSubmenuOpen && !export.IsSubmenuOpen, "Alt closes the complete menu chain rather than stepping back like Escape");
         UiLanguage.Configure(new AppSettings { InterfaceLanguage = "ar" });
         UiLanguage.Apply(preferences);
-        check(((TabItem)preferences.FindName("LowVisionTab")).Header.ToString() == "ضعف البصر" &&
+        check(((TabItem)preferences.FindName("AccessibilityTab")).Header.ToString() == "إمكانية الوصول" &&
             UiLanguage.T("Show status bar") == "إظهار شريط الحالة", "Low-vision and status visibility controls have Arabic labels");
         preferences.Close();
         editor.Clear();
