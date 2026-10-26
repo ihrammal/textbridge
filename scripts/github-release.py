@@ -20,8 +20,9 @@ parser=argparse.ArgumentParser()
 parser.add_argument('action',choices=['status','draft','publish','verify'])
 parser.add_argument('--commit',required=True)
 parser.add_argument('--checkout',default=str(ROOT/'.tools/textbridge-github'))
+parser.add_argument('--version',default='1.1.0',help='Release/update build identifier; display version is unchanged.')
 args=parser.parse_args()
-VERSION='1.1.0'
+VERSION=args.version
 TAG='v'+VERSION
 ARTIFACTS=ROOT/'artifacts'
 
@@ -67,7 +68,7 @@ release=next((item for item in releases if item['tag_name']==TAG),None)
 if args.action in ('draft','publish') and not passed:
     raise RuntimeError('Fresh GitHub Windows validation has not passed on the exact source commit.')
 assets=list(manifest['assets'])
-for filename in [f'release-manifest-{VERSION}.json','SHA256SUMS.txt','TextBridge-social-kit-1.1.0.zip']:
+for filename in [f'release-manifest-{VERSION}.json','SHA256SUMS.txt']:
     file=ARTIFACTS/filename
     assets.append(dict(file=filename,bytes=file.stat().st_size,sha256=hashlib.sha256(file.read_bytes()).hexdigest()))
 
@@ -76,7 +77,7 @@ if args.action=='draft':
     notes=(ROOT/f'docs/RELEASE-NOTES-{VERSION}.md').read_text(encoding='utf-8')
     notes+='\n\nVerified source: `'+args.commit+'`.\n\n'+('\n'.join('[Windows validation]('+run['url']+')' for run in runs if run['conclusion']=='success'))
     if release is None:
-        release=api('/releases','POST',dict(tag_name=TAG,target_commitish=args.commit,name='TextBridge 1.1.0 — offline OCR upgrade',body=notes,draft=True,prerelease=False))
+        release=api('/releases','POST',dict(tag_name=TAG,target_commitish=args.commit,name='TextBridge 1.1.0 — corrected build 1' if VERSION=='1.1.0.1' else 'TextBridge '+VERSION,body=notes,draft=True,prerelease=False))
     else:
         if release['target_commitish']!=args.commit:raise RuntimeError('Existing draft targets a different source commit.')
         release=api('/releases/'+str(release['id']),'PATCH',dict(body=notes))

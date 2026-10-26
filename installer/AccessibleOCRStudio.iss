@@ -1,5 +1,6 @@
 ﻿#define MyAppName "TextBridge"
 #define MyAppVersion "1.1.0"
+#define MyAppBuild "1.1.0.1"
 #define MyAppPublisher "Iman Rammal"
 #define MyAppExeName "TextBridge.exe"
 #ifdef TestInstall
@@ -23,6 +24,10 @@ AppId={{9A9C570A-BA44-49B6-95E4-73B724DD0A60}
 #endif
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppBuild}
+VersionInfoTextVersion={#MyAppBuild}
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductTextVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\TextBridge
 DefaultGroupName={#MyAppShortcutName}

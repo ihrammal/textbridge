@@ -63,3 +63,7 @@ editing temporarily protect the reading position. API correction still protects
 its pending text snapshot separately. Plain page headings replace decorative
 dash separators in editor output; legacy non-editor output keeps its existing
 format. Help and shortcut pages describe the new behaviour.
+
+Publication authorization: On 26 October 2026 the owner requested completion of
+final checks and publication. Retain the displayed 1.1.0 version, use internal
+build/tag 1.1.0.1 for update discovery, and retain consent before installation.

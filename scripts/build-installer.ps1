@@ -16,3 +16,12 @@ if ($SelectiveInstall) { $Arguments += '/DSelectiveInstall' }
 $Arguments += Join-Path $Root 'installer\AccessibleOCRStudio.iss'
 & $Compiler @Arguments
 if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
+if (-not $TestInstall -and -not $SelectiveInstall) {
+    [xml]$Project = Get-Content (Join-Path $Root 'src/AccessibleOCRStudio/AccessibleOCRStudio.csproj')
+    $Version = [string]$Project.Project.PropertyGroup.Version
+    $Build = [string]$Project.Project.PropertyGroup.AssemblyVersion
+    if ($Build -and $Build -ne $Version) {
+        Copy-Item -LiteralPath (Join-Path $Root "artifacts/TextBridge-Setup-$Version.exe") -Destination (Join-Path $Root "artifacts/TextBridge-Setup-$Build.exe") -Force
+        Write-Host "Created updater-compatible installer alias for build $Build."
+    }
+}

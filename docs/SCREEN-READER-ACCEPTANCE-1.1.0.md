@@ -182,3 +182,18 @@ recognition/cancellation set has four. Source build has no warnings or errors.
 The final candidate is `D:\AOS\artifacts\TextBridge-1.1.0-final-test\TextBridge.exe`.
 The open desktop test window uses the earlier editable-pages-test folder; do
 not overwrite or silently close it while the idle/readiness question is pending.
+
+## Resumed desktop check, 26 October 2026
+
+After the owner confirmed the laptop was idle, the completed 232-page document
+was checked with NVDA Speech Viewer. A temporary marker was selected, copied,
+cut, pasted and deleted. Tab reached Previous and Next page buttons; activating
+them moved from page 232 to 231 and back. Up/Down read the Arabic body line and
+header; character navigation spoke individual characters in the English marker.
+All scratch TextBridge processes were closed without overwriting the source PDF.
+A fresh empty final build then exited normally with Alt+F4. No TextBridge window
+was left open. These observations supersede the pending desktop checks above.
+
+The owner subsequently explicitly requested final testing and publication of the
+minor correction. That instruction replaces the earlier publication hold. The
+397-check regression record and installer/CI gates still apply before release.
