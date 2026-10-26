@@ -7,6 +7,9 @@
 <GroupBox x:Name="ScreenReaderGroup" Header="Screen reader and keyboard" Margin="0,0,0,12" Padding="10"><StackPanel>
 <TextBlock Text="Screen reader support is always enabled" TextWrapping="Wrap"/>
 <CheckBox x:Name="AnnounceProgress" Content="Announce OCR progress" Margin="0,8"/>
+<Label Target="{Binding ElementName=AnnouncementInterval}" Padding="0"><TextBlock Text="Progress announcement frequency" TextWrapping="Wrap"/></Label>
+<ComboBox x:Name="AnnouncementInterval" AutomationProperties.Name="Progress announcement frequency" IsEnabled="{Binding IsChecked, ElementName=AnnounceProgress}" Margin="0,5,0,8"><ComboBoxItem Content="Every completed page" Tag="0"/><ComboBoxItem Content="Every 5 seconds" Tag="5"/><ComboBoxItem Content="Every 10 seconds" Tag="10"/><ComboBoxItem Content="Every 15 seconds" Tag="15"/><ComboBoxItem Content="Every 30 seconds" Tag="30"/><ComboBoxItem Content="Every 60 seconds" Tag="60"/></ComboBox>
+<TextBlock Text="Timed announcements continue during a slow page. Each completed page is added to the editor immediately. Page-by-page announcements wait for a page to finish." TextWrapping="Wrap" Margin="0,0,0,8"/>
 <CheckBox x:Name="ShowStatusBar" Content="Show status bar" Margin="0,5"/>
 <TextBlock Text="Press Shift+F6 to review the current status even when the bar is hidden. F6 returns to your document. Alt or F10 opens the menus." TextWrapping="Wrap" Margin="0,5"/>
 </StackPanel></GroupBox>

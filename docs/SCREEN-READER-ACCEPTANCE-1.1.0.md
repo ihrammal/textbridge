@@ -44,3 +44,30 @@ Record the reader/version, interface language, exact command, expected result an
 ## Publication decision
 
 Fix reproducible application failures and rerun affected cases. Only after the required screen-reader cases are accepted should the corrected 1.1.0 installer, portable build, source, matching tag and checksums replace the preview assets. Preserve the original build's provenance. Do not report pending cases as passed.
+
+## Owner's physical-keyboard feedback
+
+The owner answered “Works as expected” for the local combined Accessibility tab, section buttons, Tab/Shift+Tab, Save/Cancel and return focus, and F1/shortcut-page heading and table navigation. This accepts those tested controls and help flows only. Subsequent incremental-recognition and announcement-frequency changes need a new focused NVDA check. Automated PDF and cadence tests do not establish that speech is heard correctly.
+
+
+## Correction build 1: focused owner check (pending)
+
+Candidate: `D:\AOS\artifacts\TextBridge-1.1.0-test\TextBridge.exe`.
+Displayed/product version 1.1.0; file/assembly version 1.1.0.1.
+
+1. With NVDA running, set Accessibility settings > Screen reader and keyboard >
+   Progress announcement frequency to 5 seconds, with progress announcements enabled.
+2. Recognize a large multipage PDF. Confirm meaningful announcements continue on
+   slow pages and use the document's actual "page ... of ..." count and percentage.
+3. Confirm completed pages appear before the whole document finishes, with page
+   headings. Read and select earlier text as later pages arrive: focus, selection
+   and scroll position should remain usable. Shift+F6 should report current status.
+4. Try the every-completed-page option on another run, and confirm the selected
+   frequency persists. Copy/save available text during recognition; verify editing
+   becomes available when recognition finishes.
+5. Report any missing, repeated, interrupted or misleading speech, text duplication,
+   page numbering problem, focus movement or error. Publication waits for feedback.
+
+A single image is one engine result and appears when that page finishes. Batch
+conversion reports file/page context and writes separate files, rather than
+streaming into the editor. These are intentional, documented behaviours.

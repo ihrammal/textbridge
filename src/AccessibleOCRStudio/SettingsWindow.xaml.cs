@@ -13,6 +13,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent(); _s = settings; UpdateFeed.Text = _s.UpdateFeedUrl;
         AnnounceProgress.IsChecked = _s.AnnounceOcrProgress;
+        SelectByTag(AnnouncementInterval, AppSettings.NormalizeProgressInterval(_s.ProgressAnnouncementSeconds).ToString(CultureInfo.InvariantCulture));
         ShowStatusBar.IsChecked = _s.ShowStatusBar;
         SelectByTag(DocumentFont, _s.DocumentFontFamily);
         DocumentSize.Text = _s.DocumentFontSize.ToString(CultureInfo.CurrentCulture);
@@ -100,6 +101,7 @@ public partial class SettingsWindow : Window
         _s.InterfaceLanguage = (InterfaceLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "auto";
         _s.MessageLanguage = (MessageLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "auto";
         _s.ScreenReaderOptimization = true; _s.AnnounceOcrProgress = AnnounceProgress.IsChecked == true;
+        _s.ProgressAnnouncementSeconds = AppSettings.NormalizeProgressInterval(int.Parse((AnnouncementInterval.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "10", CultureInfo.InvariantCulture));
         _s.AccessibleReadingMode = AccessibleReading.IsChecked == true; _s.FollowWindowsHighContrast = true;
         _s.PlayStartupSound = StartupSound.IsChecked == true; _s.PlayExitSound = ExitSound.IsChecked == true; _s.ShowWelcomeMessage = WelcomeMessage.IsChecked == true;
         _s.PreserveTextLayout = PreserveLayout.IsChecked == true; _s.PreferDigitalPdfText = PreferDigital.IsChecked == true; _s.AutoRotate = AutoRotate.IsChecked == true; _s.Deskew = Deskew.IsChecked == true; _s.Grayscale = Grayscale.IsChecked == true; _s.CheckUpdatesOnStartup = CheckUpdates.IsChecked == true;

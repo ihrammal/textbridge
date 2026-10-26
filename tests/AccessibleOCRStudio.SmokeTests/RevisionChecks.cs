@@ -77,7 +77,7 @@ internal static class RevisionChecks
         check(((MenuItem)menu.Items[0]).Header?.ToString() == "_File" && window.FlowDirection == FlowDirection.LeftToRight, "Interface switches back to English without restarting");
         var top = menu.Items.OfType<MenuItem>().Select(i => i.Header.ToString()).ToList();
         check(top.Distinct().Count() == top.Count && !top.Contains("E_xport") && !top.Contains("_Accessibility") && top.Contains("_Settings"), "Export and accessibility commands have a single menu location");
-        var recognize = menu.Items.OfType<MenuItem>().Single(item => item.Header.ToString() == "_Recognize");
+        var recognize = menu.Items.OfType<MenuItem>().Single(item => item.Header.ToString()!.Replace("_", "") == "Recognize");
         var languageMenu = recognize.Items.OfType<MenuItem>().Single(item => item.HasItems);
         check(languageMenu.Items.OfType<MenuItem>().Select(item => item.Tag?.ToString()).Distinct().Count() == 7,
             "Recognize menu offers every Settings language combination without duplicates");
@@ -138,6 +138,35 @@ internal static class RevisionChecks
         var releaseUpdate = UpdateService.Parse(releaseJson, "1.1.0");
         check(releaseUpdate.UpdateAvailable && releaseUpdate.LatestVersion == "1.1.1" && releaseUpdate.InstallerUrl!.EndsWith("TextBridge-Setup-1.1.1.exe"), "Installed 1.1.0 clients detect the 1.1.1 GitHub installer and digest");
         check(!UpdateService.Parse(releaseJson.Replace("\"prerelease\":false", "\"prerelease\":true"), "1.1.0").UpdateAvailable, "Startup updater never offers a preview release");
+        var correctedJson = releaseJson.Replace("1.1.1", "1.1.0.1");
+        var correction = UpdateService.Parse(correctedJson, "1.1.0");
+        check(correction.UpdateAvailable && correction.LatestVersion == "1.1.0.1" && correction.InstallerUrl!.EndsWith("TextBridge-Setup-1.1.0.1.exe"), "Original 1.1.0 version detects its corrected internal build");
+        check(!UpdateService.Parse(correctedJson, "1.1.0.1").UpdateAvailable, "Corrected build does not repeatedly offer itself");
+        check(UpdateService.Parse(correctedJson.Replace("1.1.0.1", "1.1.0.2"), "1.1.0.1").UpdateAvailable, "A later correction of the same displayed version remains discoverable");
+        check(!UpdateService.Parse(correctedJson.Replace("\"prerelease\":false", "\"prerelease\":true"), "1.1.0").UpdateAvailable, "Unvalidated corrected builds are never offered as stable updates");
+        var assemblyVersion = typeof(MainWindow).Assembly.GetName().Version!;
+        check(assemblyVersion.ToString(3) == "1.1.0" && assemblyVersion.ToString(4) == "1.1.0.1", "Displayed version stays 1.1.0 while update checks identify corrected build 1");
+        var missingBuildAsset = false;
+        try { UpdateService.Parse(correctedJson.Replace("TextBridge-Setup-1.1.0.1.exe", "TextBridge-Setup-1.1.0.exe"), "1.1.0"); }
+        catch (InvalidDataException) { missingBuildAsset = true; }
+        check(missingBuildAsset, "A build revision requires the exact installer asset expected by original clients");
+        // Exercise the actual previously installed client without launching it or using the network.
+        var originalClient = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TextBridge", "TextBridge.dll");
+        if (File.Exists(originalClient) && System.Diagnostics.FileVersionInfo.GetVersionInfo(originalClient).FileVersion == "1.1.0.0")
+        {
+            var context = new System.Runtime.Loader.AssemblyLoadContext("TextBridge-original-update-compatibility", isCollectible: true);
+            try
+            {
+                var originalAssembly = context.LoadFromAssemblyPath(originalClient);
+                var parser = originalAssembly.GetType("AccessibleOCRStudio.Services.UpdateService")!.GetMethod("Parse", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
+                var originalResult = parser.Invoke(null, new object[] { correctedJson, "1.1.0" })!;
+                var resultType = originalResult.GetType();
+                check((bool)resultType.GetProperty("UpdateAvailable")!.GetValue(originalResult)! &&
+                    ((string)resultType.GetProperty("InstallerUrl")!.GetValue(originalResult)!).EndsWith("TextBridge-Setup-1.1.0.1.exe"),
+                    "Actual installed original 1.1.0 client accepts the corrected build's update descriptor");
+            }
+            finally { context.Unload(); }
+        }
         var bytes=Encoding.UTF8.GetBytes("verified test payload, never executed");
         var hash=Convert.ToHexString(SHA256.HashData(bytes));
         var json=System.Text.Json.JsonSerializer.Serialize(new {version="1.0.2",installerUrl="https://updates.example/installer.exe",sha256=hash});

@@ -9,7 +9,7 @@
 <li><a href="offline-and-api.html" aria-current="page">Offline OCR and privacy</a></li>
 <li><a href="troubleshooting.html">Troubleshooting</a></li>
 <li><a href="report-problem.html">Report a problem</a></li>
-<li><a href="contact.html">Author and contact</a></li></ul></nav>
+<li><a href="contact.html">Author and contact</a></li><li><a href="user-agreement.html">User agreement</a></li></ul></nav>
 <main id="main" tabindex="-1"><h1>Offline OCR and Privacy</h1>
 <h2 id="engines">PaddleOCR or Windows OCR</h2><p>Both engines recognize Arabic, English and French locally. Paddle uses models bundled with the installer and a private Python runtime; you do not install Python yourself. Windows OCR needs the matching Windows OCR language capabilities already installed. Adding a missing Windows language/OCR pack can require an Internet connection before offline use. Language display packs and OCR capabilities are not always the same thing.</p>
 <p>Choose Settings &gt; App settings &gt; OCR &gt; Recognition engine and Default OCR language profile. Custom setup can install Arabic, English and French models individually; a combined profile needs the corresponding installed models. A missing Paddle runtime cannot be selected; rerun Custom setup to add it. Windows does not provide confidence estimates or Paddle's automatic orientation classifier. For rotated Windows input, rotate the source before recognition. See <a href="troubleshooting.html">troubleshooting</a> for missing packs and poor results.</p>
@@ -18,4 +18,5 @@
 <p>The correction request sends text, not the original image/PDF. TextBridge does not automatically switch providers or fall back to a paid service. Corrections can change names, facts and numbers; review every proposal. The app limits a request to 12,000 characters, and a provider may require less.</p>
 <h2 id="keys">Keys and provider terms</h2><p>Keys are masked and encrypted for the current Windows user using Windows Data Protection API, separately from settings.json. Clear the chosen provider's key field and Save to remove its saved key. Enabling Offline only mode does not delete keys. A successful key test does not establish unlimited free use, billing status or suitable data-retention terms. Check your provider's current plan, privacy and limits before sending sensitive text.</p>
 <ul><li><a href="https://platform.openai.com/api-keys">OpenAI key management</a></li><li><a href="https://aistudio.google.com/apikey">Gemini key management</a></li><li><a href="https://console.groq.com/keys">Groq key management</a></li></ul>
+<p><a href="user-agreement.html">User agreement</a></p>
 </main><footer><p>By Iman Rammal. Free for noncommercial use; commercial use requires prior permission.</p></footer></body></html>
