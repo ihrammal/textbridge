@@ -107,3 +107,27 @@ The audit's four-minute limit cancelled during page 3 at 240 seconds. This
 verifies partial page delivery and in-flight cancellation on that file, not
 recognition of all 59 pages or audible NVDA speech. The three-page audit target
 was not reached within its time limit. No document text was written to the log.
+
+
+## Complete long-document verification (26 October 2026)
+
+Candidate: `D:\AOS\artifacts\TextBridge-1.1.0-long-doc-test\TextBridge.exe`.
+All 380 functional regression checks passed with the optimized detector and
+cancellable, uninterrupted Paddle requests. A separate 212-page native PDF test
+passed four checks: all pages delivered in order, actual totals/100 percent,
+streamed text retained exactly once, and no full-document rasterization.
+
+The owner's complete 59-page PDF finished in 880.9 seconds (about 14 minutes
+41 seconds) with Arabic/English/French Paddle settings. All page-completion events
+and all final page headings were verified sequentially from 1 through 59, with
+21,265 final characters. The private result remains local in artifacts; document
+text is not in the diagnostic log. This validates full-file processing and page
+stream delivery, not transcription accuracy or audible NVDA announcements.
+
+The old publish-folder app had an empty editor and refused normal exit while
+busy. Under the owner's explicit request to close test copies, that stale app
+and its exact Paddle worker were stopped. After completion, process and desktop
+checks found no remaining TextBridge windows or OCR test workers. A clean manual
+NVDA run remains required before publication. Test every-five-second progress,
+page-by-page insertion without selection jumps, Escape Yes/No/Cancel, and exit
+Yes/No/Cancel followed by the unsaved-text prompt.
