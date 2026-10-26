@@ -39,7 +39,12 @@ try {
         if (-not (Test-Path (Join-Path $TestRoot $file))) { throw "Installed package is missing $file" }
     }
     if ($WindowsOnly -and (Test-Path -LiteralPath (Join-Path $TestRoot 'paddle'))) { throw 'Windows-only installation contains the optional Paddle component.' }
-    $ExpectedEngine = if ($WindowsOnly) { 'windows' } else { 'paddle,paddle\arabic,paddle\english,paddle\french' }
+    $ExpectedEngine = if ($WindowsOnly) { 'windows' } else { 'paddle' }
+    if (-not $WindowsOnly) {
+        foreach ($Model in @('arabic_PP-OCRv5_mobile_rec','en_PP-OCRv5_mobile_rec','latin_PP-OCRv5_mobile_rec')) {
+            if (-not (Test-Path (Join-Path $TestRoot "paddle/models/$Model/inference.pdiparams"))) { throw "Selected language model missing: $Model" }
+        }
+    }
     if ((Get-Content (Join-Path $TestRoot 'ocr-engine.txt') -Raw).Trim() -ne $ExpectedEngine) { throw 'Installed OCR default differs from selected components.' }
     if (-not (Test-Path $RegistryPath)) { throw 'Installer registration is missing for the requested scope.' }
     Write-Output "PASS: $ScopeName installation includes application, OCR, PDF, preprocessing and help files and correct registration."
