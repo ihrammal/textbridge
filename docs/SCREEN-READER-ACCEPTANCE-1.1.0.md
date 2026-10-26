@@ -96,3 +96,14 @@ Retest with NVDA and a large PDF: timed announcements with status bar hidden,
 actual page counts, early completed-page insertion and stable reading position;
 Escape > No, Escape > Cancel, Escape > Yes; recognize again; exit > No/Cancel,
 then exit > Yes and save/cancel the unsaved-text prompt. Acceptance is pending.
+
+
+Follow-up automated evidence: all 380 checks passed, including the actual WPF
+handler's input dispatch, early page insertion, restored editing/busy state,
+active Paddle cancellation and restart, and native/hybrid PDF regressions.
+The owner's 59-page PDF was also processed locally with Arabic/English/French
+Paddle settings: page 1 delivered at 140.5 seconds, page 2 at 183.5 seconds.
+The audit's four-minute limit cancelled during page 3 at 240 seconds. This
+verifies partial page delivery and in-flight cancellation on that file, not
+recognition of all 59 pages or audible NVDA speech. The three-page audit target
+was not reached within its time limit. No document text was written to the log.
