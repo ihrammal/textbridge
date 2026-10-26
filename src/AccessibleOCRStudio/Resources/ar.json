@@ -315,5 +315,15 @@
   "Stop recognition? Completed pages will remain available. Choose No or Cancel to continue recognition.": "هل تريد إيقاف استخراج النص؟ ستبقى الصفحات المكتملة متاحة. اختر لا أو إلغاء لمواصلة الاستخراج.",
   "Stop recognition and exit? Completed pages can be saved before closing. Choose No or Cancel to continue recognition.": "هل تريد إيقاف استخراج النص والخروج؟ يمكنك حفظ الصفحات المكتملة قبل الإغلاق. اختر لا أو إلغاء لمواصلة الاستخراج.",
   "Recognition stopped. Completed pages remain in the editor.": "توقف استخراج النص. تبقى الصفحات المكتملة في المحرر.",
-  "Batch recognition stopped. Files already exported remain in the output folder.": "توقفت معالجة الملفات. تبقى الملفات التي صُدرت في مجلد الإخراج."
+  "Batch recognition stopped. Files already exported remain in the output folder.": "توقفت معالجة الملفات. تبقى الملفات التي صُدرت في مجلد الإخراج.",
+  "Move reading position to each newly recognized page": "نقل موضع القراءة إلى كل صفحة جديدة يكتمل استخراجها",
+  "Leave this off to keep your reading position. Press F7 to go to the latest completed page whenever you want.": "اترك هذا الخيار غير محدد للاحتفاظ بموضع قراءتك. اضغط F7 للانتقال إلى أحدث صفحة مكتملة متى أردت.",
+  "Go to latest completed _page": "الانتقال إلى أحدث _صفحة مكتملة",
+  "No completed page is available yet.": "لا تتوفر صفحة مكتملة بعد.",
+  "Recognized document text. Use arrow keys to read. F7 goes to the latest completed page.": "نص المستند المستخرج. استخدم الأسهم للقراءة. ينقلك F7 إلى أحدث صفحة مكتملة.",
+  "Previous page": "الصفحة السابقة",
+  "Next page": "الصفحة التالية",
+  "There is no other completed page in that direction.": "لا توجد صفحة مكتملة أخرى في هذا الاتجاه.",
+  "Reading page {0} of {1}. {2} completed pages available.": "قراءة الصفحة {0} من {1}. تتوفر {2} صفحة مكتملة.",
+  "Wait for the current operation to finish before editing.": "انتظر اكتمال العملية الحالية قبل التحرير."
 }

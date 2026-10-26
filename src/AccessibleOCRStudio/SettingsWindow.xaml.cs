@@ -12,6 +12,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(AppSettings settings)
     {
         InitializeComponent(); _s = settings; UpdateFeed.Text = _s.UpdateFeedUrl;
+        FollowPages.IsChecked = _s.FollowRecognizedPages;
         AnnounceProgress.IsChecked = _s.AnnounceOcrProgress;
         SelectByTag(AnnouncementInterval, AppSettings.NormalizeProgressInterval(_s.ProgressAnnouncementSeconds).ToString(CultureInfo.InvariantCulture));
         ShowStatusBar.IsChecked = _s.ShowStatusBar;
@@ -100,6 +101,7 @@ public partial class SettingsWindow : Window
         _s.UpdateFeedUrl = UpdateFeed.Text.Trim();
         _s.InterfaceLanguage = (InterfaceLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "auto";
         _s.MessageLanguage = (MessageLanguage.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "auto";
+        _s.FollowRecognizedPages = FollowPages.IsChecked == true;
         _s.ScreenReaderOptimization = true; _s.AnnounceOcrProgress = AnnounceProgress.IsChecked == true;
         _s.ProgressAnnouncementSeconds = AppSettings.NormalizeProgressInterval(int.Parse((AnnouncementInterval.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "10", CultureInfo.InvariantCulture));
         _s.AccessibleReadingMode = AccessibleReading.IsChecked == true; _s.FollowWindowsHighContrast = true;

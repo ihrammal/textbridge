@@ -131,3 +131,54 @@ checks found no remaining TextBridge windows or OCR test workers. A clean manual
 NVDA run remains required before publication. Test every-five-second progress,
 page-by-page insertion without selection jumps, Escape Yes/No/Cancel, and exit
 Yes/No/Cancel followed by the unsaved-text prompt.
+
+
+## Editable page navigation correction (26 October 2026)
+
+This section supersedes the earlier read-only-during-OCR behaviour and automatic
+reading-position preservation. The owner confirmed five-second progress speech,
+then reported that NVDA was reading the first page heading while recognition had
+advanced. Live inspection showed pages 1–10 already present in the editor.
+
+The owner requested automatic following, ordinary arrow-key reading, Previous /
+Next buttons in the Tab sequence, and editing, selection, cut/copy/paste/delete
+while recognition continues. The corrected build implements these behaviours.
+F7 also reaches the newest completed page. Automatic following pauses while a
+selection is active or text has just been edited, so arriving OCR does not move
+a selection being cut or pasted. New chunks append; they do not replace edits.
+Page anchors track edits and recover after whole-document cut/paste. Page
+headings use plain text instead of spoken dash decoration. The editor's reading
+caret remains available, and the current reading page is displayed separately
+from recognition progress. A local PDF/image filename passed at startup opens
+that file; this also supports Windows Open with and reliable desktop testing.
+
+Focused checks cover active editing in the actual WPF recognition handler,
+retaining edits after cancellation, typing before the first page, page navigation
+after edits and whole-document cut/paste, following preferences, and no reading
+page zero. Complete regression results are recorded in artifacts.
+
+Live desktop observations on the owner's 232-page book in the editable-pages
+test build: all 232 pages became available and the reading label followed through
+to page 232; progress speech and an Arabic body line appeared in NVDA Speech
+Viewer. Tab visibly focused Previous page and then Next page. A test insertion
+was visible in the editor, and pages 1 and 200 remained in the accessible value.
+The early contents pages retained the Arabic native text layer in this run.
+These observations do not establish word-perfect transcription or every
+clipboard/navigation command under NVDA.
+
+The helper's focus/activity reports were inconsistent; a temporary dotnet-hosted
+reading preview also encountered an app-approval timeout and closed itself.
+Keyboard/clipboard input was paused after repeated activity warnings, pending
+confirmation that the laptop remained idle. The completed editable-pages test
+window was left open with a temporary NVDA EDIT CHECK insertion. Do not claim
+all copies were closed or the physical cut/copy/paste/delete checks completed.
+The source PDFs were not saved over. The final test build is separate from that
+open test window. Publication still requires the owner's final NVDA acceptance.
+
+
+Final automated result for this correction: all 397 regression checks passed;
+the focused progress/editing set has 36 checks and the actual-handler editable
+recognition/cancellation set has four. Source build has no warnings or errors.
+The final candidate is `D:\AOS\artifacts\TextBridge-1.1.0-final-test\TextBridge.exe`.
+The open desktop test window uses the earlier editable-pages-test folder; do
+not overwrite or silently close it while the idle/readiness question is pending.

@@ -10,6 +10,7 @@ public sealed class AppSettings
     public bool PlayStartupSound { get; set; } = true;
     public bool PlayExitSound { get; set; } = true;
     public bool ShowWelcomeMessage { get; set; } = true;
+    public bool FollowRecognizedPages { get; set; } = true;
     public bool AnnounceOcrProgress { get; set; } = true;
     // Zero means each completed page. Timed modes also report slow-page activity.
     public int ProgressAnnouncementSeconds { get; set; } = 10;

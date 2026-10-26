@@ -81,7 +81,7 @@ internal static class Program
                     "A 212-page PDF delivers every page in order without a short-document cutoff");
                 Check(delivered.All(update => update.TotalPages == pages) && delivered.Last().Percent == 100,
                     "Long-document progress uses the PDF's actual page total and reaches 100 percent");
-                Check(string.Concat(delivered.Select(update => update.TextChunk)) == result && result.Contains("--- Page 212 of 212 ---"),
+                Check(string.Concat(delivered.Select(update => update.TextChunk)) == result && result.Contains("Page 212 of 212"),
                     "All streamed pages of a long document are retained exactly once in the final text");
                 Check(!events.Any(update => update.Stage == OcrStage.Rendering),
                     "A long native-text PDF stays page-based and does not rasterize the document");
@@ -643,7 +643,7 @@ internal static class Program
         var longText = ocr.RecognizeAsync(longPdf, settings,
             updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(longUpdates.Add), includePageHeadings: true).GetAwaiter().GetResult();
         Check(longUpdates.Count(value => value.TextChunk is not null) == 17 && longUpdates.Last().TotalPages == 17 &&
-            longUpdates.Last().Percent == 100 && longText.Contains("--- Page 17 of 17 ---") &&
+            longUpdates.Last().Percent == 100 && longText.Contains("Page 17 of 17") &&
             !longUpdates.Any(value => value.Stage == OcrStage.Rendering),
             "Long native PDFs deliver every numbered page and use the PDF's actual total without rendering scans");
         var partial = new List<string>();

@@ -49,3 +49,17 @@ The four-minute cutoff in the initial owner-PDF diagnostic was a test-only
 cancellation guard. The subsequent full 59-page audit has no such cutoff. This
 must not be described as an application limit or a completed whole-file test
 until its final completion record is observed.
+
+
+## Editable reading during recognition
+
+The editor now remains editable for local OCR. New pages append while retaining
+user changes, including typing before the first result. The page model tracks
+insertions/deletions and restores header positions after whole-document cut and
+paste. Previous/Next buttons follow the editor in the Tab sequence, and F7 goes
+to the latest completed page. Following new pages defaults on per the owner's
+request and can be turned off in Accessibility settings; selections and recent
+editing temporarily protect the reading position. API correction still protects
+its pending text snapshot separately. Plain page headings replace decorative
+dash separators in editor output; legacy non-editor output keeps its existing
+format. Help and shortcut pages describe the new behaviour.

@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private TaskCompletionSource? _recognitionFinished;
     private bool _stopPromptOpen;
     private object? _recognitionOperation;
+    private RecognitionTextStream? _recognitionTextStream;
     private bool _updating;
     private bool _closing;
     private string _savedText = string.Empty;
@@ -46,10 +47,13 @@ public partial class MainWindow : Window
         foreach (var item in new[] { UndoMenu, RedoMenu, CutMenu, CopyMenu, PasteMenu, SelectAllMenu }) item.CommandTarget = DocumentText;
         DocumentText.CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, CopyOrCut_Executed, ClipboardCommand_CanExecute));
         DocumentText.CommandBindings.Add(new CommandBinding(ApplicationCommands.Cut, CopyOrCut_Executed, ClipboardCommand_CanExecute));
+        DocumentText.SelectionChanged += (_, _) => UpdatePageNavigation();
+        Closed += (_, _) => _recognitionTextStream?.Dispose();
         Deactivated += (_, _) => { _altPressed = false; _altUsedWithOtherKey = false; };
         Loaded += (_, _) => SystemParameters.StaticPropertyChanged += SystemAppearanceChanged;
         Unloaded += (_, _) => SystemParameters.StaticPropertyChanged -= SystemAppearanceChanged;
         SyncAccessibilityMenu();
+        UpdatePageNavigation();
     }
 
     private void SystemAppearanceChanged(object? sender, PropertyChangedEventArgs e)
@@ -99,16 +103,30 @@ public partial class MainWindow : Window
         if (DialogGuard.Run(d.ShowDialog) == true)
         {
             if (!await ConfirmUnsavedTextAsync()) return;
-            _currentFile = d.FileName;
+            LoadDocument(d.FileName);
+        }
+    }
+
+    internal bool OpenStartupFile(string path)
+    {
+        var supported = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp" };
+        if (!System.IO.File.Exists(path) || !supported.Contains(System.IO.Path.GetExtension(path).ToLowerInvariant())) return false;
+        LoadDocument(System.IO.Path.GetFullPath(path));
+        return true;
+    }
+    private void LoadDocument(string path)
+    {
+            _currentFile = path;
             _lastTextSavePath = null;
             _lastRecognition = null;
             _lowConfidenceIndex = -1;
+            _recognitionTextStream?.Dispose(); _recognitionTextStream = null;
             DocumentText.Clear();
+            UpdatePageNavigation();
             RecognitionProgressPanel.Visibility = Visibility.Collapsed;
             _savedText = string.Empty;
             StatusText.Text = $"Opened {System.IO.Path.GetFileName(_currentFile)}. Ready for recognition.";
             DocumentText.Focus();
-        }
     }
 
     private async void Recognize_Click(object sender, RoutedEventArgs e)
@@ -124,9 +142,13 @@ public partial class MainWindow : Window
         var operation = new object();
         _recognitionOperation = operation;
         var originalReadOnly = DocumentText.IsReadOnly;
-        DocumentText.IsReadOnly = true;
+        DocumentText.IsReadOnly = false;
         var snapshot = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(System.Text.Json.JsonSerializer.Serialize(_settings))!;
-        var textStream = new RecognitionTextStream(DocumentText, snapshot.OcrLanguages);
+        _recognitionTextStream?.Dispose();
+        var textStream = new RecognitionTextStream(DocumentText, snapshot.OcrLanguages, () => _settings.FollowRecognizedPages);
+        _recognitionTextStream = textStream;
+        textStream.Updated += UpdatePageNavigation;
+        UpdatePageNavigation();
         using var presenter = new RecognitionProgressPresenter(StatusText, RecognitionProgressDetail, RecognitionProgress,
             RecognitionProgressPanel, DocumentText, () => _settings, snapshot.MessageLanguage);
         StatusText.Text = ExperienceMessages.Get("started", _settings.MessageLanguage);
@@ -399,7 +421,7 @@ public partial class MainWindow : Window
     private void Find_Click(object sender, RoutedEventArgs e) => ShowDialogReturningFocus(new FindReplaceWindow(DocumentText, false) { Owner = this });
     private void Replace_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy) { StatusText.Text = UiLanguage.T("Text can be read, copied or saved during recognition. Editing is available when recognition finishes."); return; }
+        if (_busy && _recognitionCancellation is null) { StatusText.Text = UiLanguage.T("Wait for the current operation to finish before editing."); return; }
         ShowDialogReturningFocus(new FindReplaceWindow(DocumentText, true) { Owner = this });
     }
 
@@ -503,7 +525,7 @@ public partial class MainWindow : Window
 
     private void LinearizeTable_Click(object sender, RoutedEventArgs e)
     {
-        if (_busy) { StatusText.Text = UiLanguage.T("Text can be read, copied or saved during recognition. Editing is available when recognition finishes."); return; }
+        if (_busy && _recognitionCancellation is null) { StatusText.Text = UiLanguage.T("Wait for the current operation to finish before editing."); return; }
         var selected = DocumentText.SelectedText;
         if (string.IsNullOrWhiteSpace(selected))
         {
@@ -533,6 +555,36 @@ public partial class MainWindow : Window
         DocumentText.Select(start, word.Text.Length);
         DocumentText.ScrollToLine(DocumentText.GetLineIndexFromCharacterIndex(start));
         StatusText.Text = UiLanguage.T($"Text to check {_lowConfidenceIndex + 1} of {words.Count}: {word.Text}. Recognition confidence: {word.Confidence:0} percent.");
+    }
+
+    private void LatestRecognizedPage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recognitionTextStream?.HasChunks != true)
+        { StatusText.Text = UiLanguage.T("No completed page is available yet."); return; }
+        _recognitionTextStream.GoToLatestPage();
+        DocumentText.Focus();
+    }
+
+    private void PreviousPage_Click(object sender, RoutedEventArgs e) => MoveRecognizedPage(-1);
+    private void NextPage_Click(object sender, RoutedEventArgs e) => MoveRecognizedPage(1);
+    private void MoveRecognizedPage(int direction)
+    {
+        if (_recognitionTextStream?.MovePage(direction) != true)
+        {
+            StatusText.Text = UiLanguage.T(_recognitionTextStream?.HasChunks == true
+                ? "There is no other completed page in that direction." : "No completed page is available yet.");
+            return;
+        }
+        DocumentText.Focus();
+    }
+    private void UpdatePageNavigation()
+    {
+        if (_recognitionTextStream?.HasChunks != true)
+        { ReadingPageStatus.Text = UiLanguage.T("No completed page is available yet."); return; }
+        ReadingPageStatus.Text = UiLanguage.T("Reading page {0} of {1}. {2} completed pages available.")
+            .Replace("{0}", _recognitionTextStream.CurrentPageNumber.ToString())
+            .Replace("{1}", _recognitionTextStream.TotalPages.ToString())
+            .Replace("{2}", _recognitionTextStream.AvailablePages.ToString());
     }
 
     private void FocusDocument_Click(object sender, RoutedEventArgs e) => DocumentText.Focus();
@@ -626,15 +678,6 @@ public partial class MainWindow : Window
             return;
         }
         if (_altPressed) _altUsedWithOtherKey = true;
-        // Tab visits the document and status; only Alt/F10/mnemonics enter the menu.
-        if (key == Key.Tab && !IsMenuActive &&
-            (Keyboard.Modifiers == ModifierKeys.None || Keyboard.Modifiers == ModifierKeys.Shift))
-        {
-            if (_settings.ShowStatusBar && DocumentText.IsKeyboardFocusWithin) StatusText.Focus();
-            else DocumentText.Focus();
-            e.Handled = true;
-            return;
-        }
         if (key == Key.Escape && IsMenuActive)
         {
             CloseMenuLevel(); e.Handled = true; return;
@@ -661,6 +704,7 @@ public partial class MainWindow : Window
         else if (ctrl && e.Key == Key.OemComma) { Preferences_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F6 && Keyboard.Modifiers == ModifierKeys.Shift) { FocusStatus_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F6 && Keyboard.Modifiers == ModifierKeys.None) { FocusDocument_Click(sender, e); e.Handled = true; }
+        else if (e.Key == Key.F7 && Keyboard.Modifiers == ModifierKeys.None) { LatestRecognizedPage_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F1) { Help_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F4 && shift) { PreviousLowConfidence_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F4) { NextLowConfidence_Click(sender, e); e.Handled = true; }

@@ -52,9 +52,9 @@ public sealed record OcrProgress(OcrStage Stage, int Page, int TotalPages, int C
         if (!headings) return prefix + (page == 1 ? "" : $"--- Page {page} ---{Environment.NewLine}") + text.Trim();
         var heading = ExperienceMessages.Language(language) switch
         {
-            "ar" => $"--- الصفحة {page} من {total} ---",
-            "fr" => $"--- Page {page} sur {total} ---",
-            _ => $"--- Page {page} of {total} ---"
+            "ar" => $"الصفحة {page} من {total}",
+            "fr" => $"Page {page} sur {total}",
+            _ => $"Page {page} of {total}"
         };
         return prefix + heading + Environment.NewLine + text.Trim();
     }
