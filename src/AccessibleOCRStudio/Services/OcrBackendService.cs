@@ -25,10 +25,10 @@ public sealed class OcrBackendService
         _ => DefaultEngine
     };
 
-    public Task<OcrPageResult> RecognizeAsync(string image, AppSettings settings)
+    public Task<OcrPageResult> RecognizeAsync(string image, AppSettings settings, CancellationToken cancellationToken = default)
         => ResolveEngine(settings)=="windows"
-            ? new WindowsOcrService().RecognizeAsync(image,settings)
-            : new PaddleOcrService().RecognizeAsync(image,settings);
+            ? new WindowsOcrService().RecognizeAsync(image,settings,cancellationToken)
+            : new PaddleOcrService().RecognizeAsync(image,settings,cancellationToken);
 
     public Task CreatePdfPageAsync(string image,string output,OcrPageResult result)
         => Task.Run(()=>SearchablePdfWriter.Write(image,output,result));

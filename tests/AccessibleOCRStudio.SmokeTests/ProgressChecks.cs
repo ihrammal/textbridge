@@ -6,8 +6,67 @@ using AccessibleOCRStudio.Services;
 
 internal static class ProgressChecks
 {
+    internal static void RunRecognitionUi(string pdf, Action<bool, string> check)
+    {
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var window = new MainWindow();
+        var type = typeof(MainWindow);
+        var settings = (AppSettings)type.GetField("_settings", flags)!.GetValue(window)!;
+        settings.OcrLanguages = "eng"; settings.PreferDigitalPdfText = true;
+        settings.AnnounceOcrProgress = true; settings.ProgressAnnouncementSeconds = 5;
+        type.GetField("_currentFile", flags)!.SetValue(window, pdf);
+        var editor = (TextBox)window.FindName("DocumentText");
+        var dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var pulses = 0; var started = false; var cancelled = false; var partialReadOnly = false;
+        var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background)
+            { Interval = TimeSpan.FromMilliseconds(10) };
+        timer.Tick += (_, _) =>
+        {
+            pulses++;
+            if (started && !cancelled && editor.Text.Length > 0 && (bool)type.GetField("_busy", flags)!.GetValue(window)!)
+            {
+                partialReadOnly = editor.IsReadOnly;
+                cancelled = true;
+                ((CancellationTokenSource)type.GetField("_recognitionCancellation", flags)!.GetValue(window)!).Cancel();
+            }
+            if (started && !(bool)type.GetField("_busy", flags)!.GetValue(window)! || clock.Elapsed > TimeSpan.FromSeconds(20))
+                frame.Continue = false;
+        };
+        dispatcher.BeginInvoke(new Action(() =>
+        {
+            type.GetMethod("Recognize_Click", flags)!.Invoke(window, new object[] { window, new RoutedEventArgs() });
+            started = true;
+        }));
+        timer.Start();
+        try { System.Windows.Threading.Dispatcher.PushFrame(frame); }
+        finally { timer.Stop(); }
+        check(pulses > 1 && cancelled && partialReadOnly && editor.Text.Contains("Page 1 of 3"),
+            "Actual WPF recognition handler keeps dispatching input and inserts a completed page before cancellation");
+        check(!(bool)type.GetField("_busy", flags)!.GetValue(window)! && !editor.IsReadOnly &&
+            ((TextBlock)window.FindName("StatusText")).Text.Contains("stopped", StringComparison.OrdinalIgnoreCase),
+            "Actual WPF cancellation releases the busy state and restores editing while retaining partial text");
+        type.GetField("_allowClose", flags)!.SetValue(window, true); window.Close();
+    }
+
     internal static void Run(string temp, Action<bool, string> check)
     {
+        using (var stop = new CancellationTokenSource())
+        {
+            stop.Cancel();
+            var cancelled = false;
+            try { new LocalOcrService().RecognizeAsync("never-open.pdf", new AppSettings(), cancellationToken: stop.Token).GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) { cancelled = true; }
+            check(cancelled, "Cancelled recognition does not open the input or launch tools");
+        }
+        var window = new MainWindow();
+        var progressRegion = (TextBlock)window.FindName("RecognitionProgressDetail");
+        var statusBar = (System.Windows.Controls.Primitives.StatusBar)window.FindName("ApplicationStatusBar");
+        check(System.Windows.Automation.AutomationProperties.GetLiveSetting(progressRegion) == System.Windows.Automation.AutomationLiveSetting.Polite &&
+            statusBar.Visibility == Visibility.Collapsed, "Progress has its own live region even when the status bar is hidden");
+        progressRegion.Text = "Page 2 of 3";
+        check(System.Windows.Automation.AutomationProperties.GetName(progressRegion) == "Page 2 of 3", "Progress live-region name exposes the exact current message to screen readers");
         var cadence = new OcrAnnouncementCadence();
         check(!cadence.Due(TimeSpan.FromSeconds(9), 10, true) && cadence.Due(TimeSpan.FromSeconds(10), 10, false),
             "Timed progress speaks at the chosen interval even without a completed page");

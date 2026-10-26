@@ -24,6 +24,9 @@ internal static class LiveRegionAnnouncements
         var target = text.IsVisible || fallback is null ? (System.Windows.UIElement)text : fallback;
         var peer = UIElementAutomationPeer.FromElement(target) ?? UIElementAutomationPeer.CreatePeerForElement(target);
         if (peer is null) return;
+        // NVDA may ignore UIA notification events from WPF text peers. A visible
+        // live-region event also exposes the actual message through the peer name.
+        peer.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         try
         {
             peer.RaiseNotificationEvent(AutomationNotificationKind.Other, AutomationNotificationProcessing.ImportantMostRecent, message, "TextBridge status");

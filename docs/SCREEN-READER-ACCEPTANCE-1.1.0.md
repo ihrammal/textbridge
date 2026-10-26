@@ -71,3 +71,28 @@ Displayed/product version 1.1.0; file/assembly version 1.1.0.1.
 A single image is one engine result and appears when that page finishes. Batch
 conversion reports file/page context and writes separate files, rather than
 streaming into the editor. These are intentional, documented behaviours.
+
+
+## Owner-reported failure and follow-up fix (26 October 2026)
+
+The owner reported no progress speech or incremental text, and closing was blocked
+by a wait-for-recognition message. The previous progress build is NOT accepted.
+
+Follow-up candidate: `D:\AOS\artifacts\TextBridge-1.1.0-progress-fix\TextBridge.exe`.
+The visible progress region is now a named polite live region, with both an
+explicit live-region event and a UIA notification; it no longer routes timed
+messages through the editor when the status bar is hidden. Real NVDA speech
+still requires owner verification. Recognition runs outside the UI dispatcher;
+PDF extraction and image/layout inspection are bounded to the current page.
+
+Escape outside a menu asks Yes/No/Cancel to stop local or batch recognition.
+Yes cancels the PDF/preprocessing/Paddle/Windows work; completed editor pages or
+previously exported batch files remain. No/Cancel continues. Exit uses the same
+confirmation, waits for cancellation cleanup, then offers the usual unsaved-text
+choice before closing. Default is Cancel. Escape in a menu still closes a menu
+level first. Cancellation is not reported as an OCR error.
+
+Retest with NVDA and a large PDF: timed announcements with status bar hidden,
+actual page counts, early completed-page insertion and stable reading position;
+Escape > No, Escape > Cancel, Escape > Yes; recognize again; exit > No/Cancel,
+then exit > Yes and save/cancel the unsaved-text prompt. Acceptance is pending.

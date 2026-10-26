@@ -66,6 +66,15 @@ internal static class Program
         Directory.CreateDirectory(temp);
         try
         {
+            if (args.Contains("--recognition-ui-checks-only"))
+            {
+                var one = Path.Combine(temp, "native.pdf");
+                var three = Path.Combine(temp, "three.pdf");
+                MakeHybridPdf(one, null);
+                RunTool(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe"), one, one, one, three);
+                ProgressChecks.RunRecognitionUi(three, Check);
+                Console.WriteLine($"All {passed} checks passed."); return 0;
+            }
             if (args.Contains("--menu-checks-only"))
             { MenuChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
             if (args.Contains("--revision-checks-only"))
@@ -276,6 +285,16 @@ internal static class Program
             var languageText = ocr.RecognizeAsync(languagePdf, settings).GetAwaiter().GetResult();
             Check(languageText.Split(sample.Expected, StringSplitOptions.None).Length == 2, sample.Language + " searchable PDF preserves native Unicode text without duplication: " + languageText);
         }
+        using (var stop = new CancellationTokenSource(TimeSpan.FromMilliseconds(100)))
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var cancelled = false;
+            try { new PaddleOcrService().RecognizeAsync(images[0], new AppSettings { OcrLanguages = "eng", AutoRotate = false }, stop.Token).GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) { cancelled = true; }
+            Check(cancelled && clock.Elapsed < TimeSpan.FromSeconds(5), "Stopping active Paddle recognition terminates its worker promptly");
+        }
+        Check(ocr.RecognizeAsync(images[0], new AppSettings { OcrLanguages = "eng", Deskew = false, AutoRotate = false }).GetAwaiter().GetResult().Contains("quick brown fox"),
+            "Paddle restarts cleanly after an interrupted recognition request");
         var arabicRows = Path.Combine(temp, "arabic-connected-rows.png");
         const string arabicRowsText = "القراءة حق للجميع\nأحمد يقرأ كتابا في المكتبة\nإلى أين تذهب الأسرة اليوم؟";
         MakeImage(arabicRows, arabicRowsText, true);
@@ -308,6 +327,23 @@ internal static class Program
         var mergeInfo = new System.Diagnostics.ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe")) { UseShellExecute = false, CreateNoWindow = true };
         foreach (var argument in new[] { pdf, pdf, pdf, multiple }) mergeInfo.ArgumentList.Add(argument);
         using (var merge = System.Diagnostics.Process.Start(mergeInfo)!) { merge.WaitForExit(); Check(merge.ExitCode == 0, "Multi-page PDF fixture was created"); }
+        ProgressChecks.RunRecognitionUi(multiple, Check);
+        using (var stop = new CancellationTokenSource())
+        {
+            var completed = new List<OcrProgress>();
+            var stopped = false;
+            try
+            {
+                ocr.RecognizeAsync(multiple, english, updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(update =>
+                {
+                    if (update.TextChunk is not null) { completed.Add(update); stop.Cancel(); }
+                }), includePageHeadings: true, cancellationToken: stop.Token).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException) { stopped = true; }
+            Check(stopped && completed.Count == 1 && completed[0].TotalPages == 3 && completed[0].TextChunk!.Contains("quick brown fox"),
+                "Stopping a multipage PDF retains its first delivered page and prevents later page delivery");
+        }
+        Check(ocr.RecognizeAsync(pdf, english).GetAwaiter().GetResult().Contains("quick brown fox"), "Recognition can run again immediately after cancellation");
         var multipleOutput = Path.Combine(temp, "multiple-searchable.pdf");
         new SearchablePdfService().CreateAsync(multiple, multipleOutput, english).GetAwaiter().GetResult();
         var multipleText = ocr.RecognizeAsync(multipleOutput, english).GetAwaiter().GetResult();

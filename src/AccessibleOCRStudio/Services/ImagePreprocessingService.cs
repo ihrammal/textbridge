@@ -4,8 +4,9 @@ namespace AccessibleOCRStudio.Services;
 
 public sealed class ImagePreprocessingService
 {
-    public async Task<(string Path, bool Temporary)> PrepareAsync(string input, AppSettings settings)
+    public async Task<(string Path, bool Temporary)> PrepareAsync(string input, AppSettings settings, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!settings.Deskew && !settings.Grayscale) return (input, false);
         var bundled = Path.Combine(AppContext.BaseDirectory, "image", "magick.exe");
         if (!File.Exists(bundled)) return (input, false); // preprocessing is optional until ImageMagick is bundled
@@ -19,7 +20,10 @@ public sealed class ImagePreprocessingService
         if (settings.Deskew) { psi.ArgumentList.Add("-deskew"); psi.ArgumentList.Add("40%"); }
         psi.ArgumentList.Add(output);
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start image preprocessing.");
-        var err = await p.StandardError.ReadToEndAsync(); await p.WaitForExitAsync();
+        using var stop = cancellationToken.Register(() => { try { if (!p.HasExited) p.Kill(entireProcessTree: true); } catch { } });
+        string err;
+        try { err = await p.StandardError.ReadToEndAsync(cancellationToken); await p.WaitForExitAsync(cancellationToken); }
+        catch { try { File.Delete(output); } catch { } throw; }
         if (p.ExitCode != 0) { try { File.Delete(output); } catch { } return (input, false); }
         return (output, true);
     }

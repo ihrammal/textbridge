@@ -310,5 +310,10 @@
   "_Offline OCR and Privacy": "الاستخراج المحلي وال_خصوصية",
   "Create API _key (opens provider website)": "إنشاء مف_تاح خدمة (يفتح موقع مقدم الخدمة)",
   "Create {0} API _key (opens website)": "إنشاء مف_تاح {0} (يفتح الموقع)",
-  "A corrected build of version {0} is available. Download and install it now? Your work will be saved or reviewed before installation. Windows may ask for administrator permission.": "يتوفر بناء مصحح من الإصدار {0}. هل تريد تنزيله وتثبيته الآن؟ ستُتاح لك مراجعة عملك أو حفظه قبل التثبيت. قد يطلب Windows إذن المسؤول."
+  "A corrected build of version {0} is available. Download and install it now? Your work will be saved or reviewed before installation. Windows may ask for administrator permission.": "يتوفر بناء مصحح من الإصدار {0}. هل تريد تنزيله وتثبيته الآن؟ ستُتاح لك مراجعة عملك أو حفظه قبل التثبيت. قد يطلب Windows إذن المسؤول.",
+  "Stop recognition": "إيقاف استخراج النص",
+  "Stop recognition? Completed pages will remain available. Choose No or Cancel to continue recognition.": "هل تريد إيقاف استخراج النص؟ ستبقى الصفحات المكتملة متاحة. اختر لا أو إلغاء لمواصلة الاستخراج.",
+  "Stop recognition and exit? Completed pages can be saved before closing. Choose No or Cancel to continue recognition.": "هل تريد إيقاف استخراج النص والخروج؟ يمكنك حفظ الصفحات المكتملة قبل الإغلاق. اختر لا أو إلغاء لمواصلة الاستخراج.",
+  "Recognition stopped. Completed pages remain in the editor.": "توقف استخراج النص. تبقى الصفحات المكتملة في المحرر.",
+  "Batch recognition stopped. Files already exported remain in the output folder.": "توقفت معالجة الملفات. تبقى الملفات التي صُدرت في مجلد الإخراج."
 }

@@ -49,11 +49,19 @@ internal sealed class RecognitionProgressPresenter : IProgress<OcrProgress>, IDi
     }
 
     private void Tick(object? sender, EventArgs e) => Speak(false);
+    internal void Finish(string message)
+    {
+        Dispose();
+        LiveRegionAnnouncements.SetSilently(status, message);
+        detail.Text = message;
+        if (settings().AnnounceOcrProgress) LiveRegionAnnouncements.Announce(detail, readerTarget, message);
+    }
+
     private void Speak(bool pageCompleted)
     {
         var current = settings();
         if (!stopped && current.AnnounceOcrProgress && cadence.Due(elapsed.Elapsed, current.ProgressAnnouncementSeconds, pageCompleted))
-            LiveRegionAnnouncements.Announce(status, readerTarget, CurrentMessage);
+            LiveRegionAnnouncements.Announce(detail, readerTarget, CurrentMessage);
     }
 
     public void Dispose()

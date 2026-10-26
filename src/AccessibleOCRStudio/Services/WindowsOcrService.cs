@@ -17,11 +17,12 @@ public sealed class WindowsOcrService
         }
     }
 
-    public Task<OcrPageResult> RecognizeAsync(string image,AppSettings settings)
-        => Task.Run(()=>RecognizeCoreAsync(image,settings));
+    public Task<OcrPageResult> RecognizeAsync(string image,AppSettings settings,CancellationToken cancellationToken = default)
+        => Task.Run(()=>RecognizeCoreAsync(image,settings,cancellationToken));
 
-    private static async Task<OcrPageResult> RecognizeCoreAsync(string image,AppSettings settings)
+    private static async Task<OcrPageResult> RecognizeCoreAsync(string image,AppSettings settings,CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var profiles=settings.OcrLanguages.Split('+',StringSplitOptions.RemoveEmptyEntries).Distinct().ToArray();
         if(profiles.Length==0 || profiles.Any(profile=>!Codes.ContainsKey(profile)))
             throw new InvalidOperationException("Unsupported Windows OCR language: "+settings.OcrLanguages);
@@ -42,7 +43,7 @@ public sealed class WindowsOcrService
         foreach(var language in languages)
         {
             var engine=OcrEngine.TryCreateFromLanguage(language) ?? throw new InvalidOperationException("Windows OCR is unavailable for "+language.LanguageTag);
-            var result=await engine.RecognizeAsync(bitmap);
+            var result=await engine.RecognizeAsync(bitmap).AsTask(cancellationToken);
             foreach(var source in result.Lines)
             {
                 var words=source.Words.Select(word=>new OcrSpanResult(word.Text,new[] {
