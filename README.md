@@ -4,9 +4,9 @@ TextBridge is a Windows application by Iman Rammal that turns Arabic, English an
 
 Version 1.1.0 replaces Tesseract with a choice of PaddleOCR PP-OCRv5 or Windows OCR. Both recognize text locally. Paddle includes a private interpreter and language models; Windows OCR uses installed Windows language packs. Searchable PDF export works with either engine.
 
-**[Download TextBridge 1.1.0 for Windows (64-bit)](https://github.com/ihrammal/textbridge/releases/download/v1.1.0/TextBridge-Setup-1.1.0.exe)**
+**[Download TextBridge 1.1.0 for Windows (64-bit)](https://github.com/ihrammal/textbridge/releases/download/v1.1.0.1/TextBridge-Setup-1.1.0.exe)**
 
-[Release page, portable build, source and checksums](https://github.com/ihrammal/textbridge/releases/tag/v1.1.0). The installer is unsigned. The package includes the offline OCR runtime and language models.
+[Release page, portable build, source and checksums](https://github.com/ihrammal/textbridge/releases/tag/v1.1.0.1). The installer is unsigned. The package includes the offline OCR runtime and language models.
 
 The initial 24 generated samples matched exactly with Paddle. A separate 10-sample printed Arabic trial measured 0.20% character errors for Paddle versus 0.31% for Tesseract. These are small test sets, not a general accuracy guarantee. [Read the verification scope and limitations](docs/OCR-UPGRADE-1.1.0.md).
 
@@ -46,7 +46,13 @@ preserves whitespace. Searchable PDF retains original page appearance. Complex
 columns and tables can still require manual review. The spacing option is off
 by default because extra spaces can reduce reading usability in Arabic.
 
+## Document recognition progress
+
+Completed pages appear immediately in the editable text area with page numbers. Choose announcement timing in Accessibility settings. New pages are followed by default; Tab reaches Previous/Next page and F7 moves to the latest completed page. Escape offers to stop recognition and retain completed text.
+
 ## Automatic updates
+
+The displayed version remains 1.1.0; corrected internal build 1.1.0.1 enables update discovery. Installation starts after the user accepts the update prompt.
 
 Help > Check for Updates checks the configured HTTPS feed, downloads a newer
 stable installer, verifies its SHA-256 checksum and starts installation. Unsaved
