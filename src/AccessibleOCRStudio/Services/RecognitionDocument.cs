@@ -6,6 +6,7 @@ public sealed record DocumentBlock(string Kind, string Text, int Page, bool Righ
 public sealed class RecognitionDocument
 {
     public string PlainText { get; set; } = string.Empty;
+    public int ContentStart { get; set; }
     public List<OcrWord> Words { get; } = new();
     public List<DocumentBlock> Blocks { get; } = new();
     public double AverageConfidence => Words.Count == 0 ? 0 : Words.Average(w => w.Confidence);
@@ -16,7 +17,7 @@ public sealed class RecognitionDocument
         if (currentText.Replace("\r\n", "\n") != PlainText.Replace("\r\n", "\n"))
             return Array.Empty<(OcrWord, int)>();
         var result = new List<(OcrWord, int)>();
-        var cursor = 0;
+        var cursor = ContentStart;
         foreach (var word in Words)
         {
             if (string.IsNullOrEmpty(word.Text)) continue;

@@ -39,7 +39,7 @@ public partial class ApiSettingsWindow : Window
         ProviderNotice.Text = ApiProviderCatalog.Notice(SelectedProvider);
         ApiKeyLabel.Text = UiLanguage.T("Your " + SelectedProvider + " API key");
         CreateApiKey.IsEnabled = ApiProviderCatalog.IsSupported(SelectedProvider);
-        CreateApiKey.Content = UiLanguage.T("_Create " + SelectedProvider + " API key (opens website)");
+        CreateApiKey.Content = UiLanguage.T("Create " + SelectedProvider + " API _key (opens website)");
         TestApiKey.Content = UiLanguage.T("_Test " + SelectedProvider + " API key");
         TestApiKey.IsEnabled = ApiProviderCatalog.IsSupported(SelectedProvider);
         ApiStatus.Text = "Testing uses only a fixed short sample, never your document. Free quota or paid charges depend on your account plan.";

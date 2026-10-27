@@ -1,0 +1,21 @@
+:root { color-scheme: light dark; font: 112.5%/1.7 "Segoe UI", Arial, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0 auto; padding: 1.25rem; max-width: 68rem; background: Canvas; color: CanvasText; }
+a { color: LinkText; text-decoration: underline; text-underline-offset: .15em; }
+a:focus-visible { outline: .2rem solid currentColor; outline-offset: .2rem; }
+.skip { display: inline-block; margin-block-end: .5rem; }
+header, nav, footer { border-block-end: 1px solid currentColor; padding-block: .6rem; }
+nav ul { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; padding-inline-start: 1.25rem; }
+nav [aria-current="page"] { font-weight: bold; }
+main { padding-block: .5rem 1.5rem; }
+h1 { line-height: 1.3; } h2 { margin-block-start: 1.8rem; line-height: 1.4; }
+p, li { overflow-wrap: anywhere; } li { margin-block: .35rem; }
+kbd, code { direction: ltr; unicode-bidi: isolate; font: .95em Consolas, monospace; }
+kbd { border: 1px solid currentColor; border-radius: .2rem; padding: .05em .3em; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin-block: 1rem; }
+caption { font-weight: bold; text-align: start; margin-block-end: .5rem; }
+th, td { border: 1px solid currentColor; padding: .6rem; text-align: start; vertical-align: top; }
+th:first-child, td:first-child { min-width: 9rem; }
+.note { border-inline-start: .25rem solid currentColor; padding-inline-start: 1rem; }
+@media print { nav, .skip, .language { display: none; } body { max-width: none; font-size: 11pt; } }

@@ -66,13 +66,49 @@ internal static class Program
         Directory.CreateDirectory(temp);
         try
         {
+            if (args.Contains("--long-native-checks-only"))
+            {
+                const int pages = 212;
+                var one = Path.Combine(temp, "native.pdf");
+                var longPdf = Path.Combine(temp, "long.pdf");
+                MakeHybridPdf(one, null);
+                RunTool(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe"), Enumerable.Repeat(one, pages).Append(longPdf).ToArray());
+                var events = new List<OcrProgress>();
+                var result = new LocalOcrService().RecognizeAsync(longPdf, new AppSettings { OcrLanguages = "eng", PreferDigitalPdfText = true },
+                    updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(events.Add), includePageHeadings: true).GetAwaiter().GetResult();
+                var delivered = events.Where(update => update.TextChunk is not null).ToArray();
+                Check(delivered.Length == pages && delivered.Select(update => update.Page).SequenceEqual(Enumerable.Range(1, pages)),
+                    "A 212-page PDF delivers every page in order without a short-document cutoff");
+                Check(delivered.All(update => update.TotalPages == pages) && delivered.Last().Percent == 100,
+                    "Long-document progress uses the PDF's actual page total and reaches 100 percent");
+                Check(string.Concat(delivered.Select(update => update.TextChunk)) == result && result.Contains("Page 212 of 212"),
+                    "All streamed pages of a long document are retained exactly once in the final text");
+                Check(!events.Any(update => update.Stage == OcrStage.Rendering),
+                    "A long native-text PDF stays page-based and does not rasterize the document");
+                Console.WriteLine($"All {passed} long-document checks passed."); return 0;
+            }
+            if (args.Contains("--recognition-ui-checks-only"))
+            {
+                var one = Path.Combine(temp, "native.pdf");
+                var three = Path.Combine(temp, "three.pdf");
+                MakeHybridPdf(one, null);
+                RunTool(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe"), one, one, one, three);
+                ProgressChecks.RunRecognitionUi(three, Check);
+                Console.WriteLine($"All {passed} checks passed."); return 0;
+            }
+            if (args.Contains("--menu-checks-only"))
+            { MenuChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
+            if (args.Contains("--revision-checks-only"))
+            { RevisionChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
+            if (args.Contains("--progress-checks-only"))
+            { ProgressChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
             if (args.Contains("--paddle-checks-only"))
             { PaddleChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
             if (args.Contains("--windows-checks-only"))
             { WindowsOcrChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
             if (args.Contains("--accessibility-checks-only"))
             { AccessibilityChecks.Run(temp, Check); Console.WriteLine($"All {passed} checks passed."); return 0; }
-            if (!args.Contains("--api-checks-only")) { AccessibilityChecks.Run(temp, Check); RevisionChecks.Run(temp, Check); Run(temp); PaddleChecks.Run(temp, Check); WindowsOcrChecks.Run(temp, Check); }
+            if (!args.Contains("--api-checks-only")) { AuthorInformationChecks.Run(Check); MenuChecks.Run(temp, Check); ProgressChecks.Run(temp, Check); AccessibilityChecks.Run(temp, Check); RevisionChecks.Run(temp, Check); Run(temp); PaddleChecks.Run(temp, Check); WindowsOcrChecks.Run(temp, Check); }
             OpenAiChecks.Run(temp, Check);
             ProviderChecks.Run(temp, Check);
             Console.WriteLine($"All {passed} checks passed.");
@@ -270,6 +306,16 @@ internal static class Program
             var languageText = ocr.RecognizeAsync(languagePdf, settings).GetAwaiter().GetResult();
             Check(languageText.Split(sample.Expected, StringSplitOptions.None).Length == 2, sample.Language + " searchable PDF preserves native Unicode text without duplication: " + languageText);
         }
+        using (var stop = new CancellationTokenSource(TimeSpan.FromMilliseconds(100)))
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var cancelled = false;
+            try { new PaddleOcrService().RecognizeAsync(images[0], new AppSettings { OcrLanguages = "eng", AutoRotate = false }, stop.Token).GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) { cancelled = true; }
+            Check(cancelled && clock.Elapsed < TimeSpan.FromSeconds(5), "Stopping active Paddle recognition terminates its worker promptly");
+        }
+        Check(ocr.RecognizeAsync(images[0], new AppSettings { OcrLanguages = "eng", Deskew = false, AutoRotate = false }).GetAwaiter().GetResult().Contains("quick brown fox"),
+            "Paddle restarts cleanly after an interrupted recognition request");
         var arabicRows = Path.Combine(temp, "arabic-connected-rows.png");
         const string arabicRowsText = "القراءة حق للجميع\nأحمد يقرأ كتابا في المكتبة\nإلى أين تذهب الأسرة اليوم؟";
         MakeImage(arabicRows, arabicRowsText, true);
@@ -292,12 +338,33 @@ internal static class Program
         Check(ocr.RecognizeAsync(pdf, english).GetAwaiter().GetResult().Contains("quick brown fox"), "PDF rendering and scanned-page OCR work");
         var batch = Path.Combine(temp, "batch");
         english.PreferDigitalPdfText = true;
-        var count = new BatchService().ConvertToTextAsync(new[] { images[0], pdf }, batch, english).GetAwaiter().GetResult();
+        var batchEvents = new List<OcrProgress>();
+        var count = new BatchService().ConvertToTextAsync(new[] { images[0], pdf }, batch, english,
+            updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(batchEvents.Add)).GetAwaiter().GetResult();
         Check(count == 2 && Directory.GetFiles(batch, "*.txt").Length == 2, "Batch converts image and PDF inputs");
+        Check(batchEvents.Where(value => value.TextChunk is not null).Select(value => value.FileNumber).SequenceEqual(new[] { 1, 2 }) &&
+            batchEvents.All(value => value.TotalFiles == 2), "Batch progress retains real file and page context for timed announcements");
         var multiple = Path.Combine(temp, "multiple.pdf");
         var mergeInfo = new System.Diagnostics.ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe")) { UseShellExecute = false, CreateNoWindow = true };
         foreach (var argument in new[] { pdf, pdf, pdf, multiple }) mergeInfo.ArgumentList.Add(argument);
         using (var merge = System.Diagnostics.Process.Start(mergeInfo)!) { merge.WaitForExit(); Check(merge.ExitCode == 0, "Multi-page PDF fixture was created"); }
+        ProgressChecks.RunRecognitionUi(multiple, Check);
+        using (var stop = new CancellationTokenSource())
+        {
+            var completed = new List<OcrProgress>();
+            var stopped = false;
+            try
+            {
+                ocr.RecognizeAsync(multiple, english, updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(update =>
+                {
+                    if (update.TextChunk is not null) { completed.Add(update); stop.Cancel(); }
+                }), includePageHeadings: true, cancellationToken: stop.Token).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException) { stopped = true; }
+            Check(stopped && completed.Count == 1 && completed[0].TotalPages == 3 && completed[0].TextChunk!.Contains("quick brown fox"),
+                "Stopping a multipage PDF retains its first delivered page and prevents later page delivery");
+        }
+        Check(ocr.RecognizeAsync(pdf, english).GetAwaiter().GetResult().Contains("quick brown fox"), "Recognition can run again immediately after cancellation");
         var multipleOutput = Path.Combine(temp, "multiple-searchable.pdf");
         new SearchablePdfService().CreateAsync(multiple, multipleOutput, english).GetAwaiter().GetResult();
         var multipleText = ocr.RecognizeAsync(multipleOutput, english).GetAwaiter().GetResult();
@@ -375,8 +442,8 @@ internal static class Program
         File.WriteAllText(brokenPdf, "This is not a PDF.");
         var failed = false;
         try { ocr.RecognizeAsync(brokenPdf, english).GetAwaiter().GetResult(); }
-        catch (InvalidOperationException ex) { failed = ex.Message.Contains("Unable to render the PDF"); }
-        Check(failed, "Malformed PDFs produce a clear rendering error");
+        catch (InvalidOperationException ex) { failed = ex.Message.Contains("Unable to inspect PDF") || ex.Message.Contains("Unable to render the PDF"); }
+        Check(failed, "Malformed PDFs produce a clear inspection or rendering error");
         Check(before.SetEquals(Directory.GetFileSystemEntries(temporaryRoot)), "Failed PDF recognition cleans up its temporary files");
         var existingPdf = Path.Combine(temp, "preserve.pdf");
         File.WriteAllText(existingPdf, "Existing output");
@@ -554,6 +621,44 @@ internal static class Program
         var text = ocr.RecognizeAsync(mixed, settings, new ImmediateProgress(progress)).GetAwaiter().GetResult();
         Check(text.Split("ExactNative123").Length == 3 && text.Split("quick brown fox").Length == 3 && text.Contains("--- Page 3 ---"), "Hybrid, native and scanned pages all survive in one document");
         Check(progress.Any(x => x.Contains("digital PDF text for page 2")) && progress.Any(x => x.Contains("Recognizing page 3")), "Mixed document chooses recognition separately for each page");
+        var chunks = new List<OcrProgress>();
+        var completed = false;
+        var arrivedBeforeReturn = 0;
+        var streamed = ocr.RecognizeAsync(mixed, settings, updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(update =>
+        {
+            chunks.Add(update);
+            if (update.TextChunk is not null && !completed) arrivedBeforeReturn++;
+        }), includePageHeadings: true).GetAwaiter().GetResult();
+        completed = true;
+        Check(arrivedBeforeReturn == 3 && string.Concat(chunks.Select(chunk => chunk.TextChunk)) == streamed,
+            "Real mixed-PDF pages stream before task completion and concatenate to the final result exactly once");
+        Check(chunks.Where(chunk => chunk.TextChunk is not null).Select(chunk => chunk.Page).SequenceEqual(new[] { 1, 2, 3 }) &&
+            chunks.All(chunk => chunk.TotalPages == 0 || chunk.TotalPages == 3) && chunks.Last().Percent == 100,
+            "Streaming uses actual PDF page counts, sequential page headings and real completion percentages");
+        Check(chunks.Where(chunk => chunk.Stage == OcrStage.Rendering).Select(chunk => chunk.Page).SequenceEqual(new[] { 1, 3 }),
+            "Only scanned/hybrid pages are rendered and native pages are delivered without rasterizing the entire file");
+        var longPdf = Path.Combine(temp, "long-native.pdf");
+        RunTool(Path.Combine(AppContext.BaseDirectory, "pdf", "pdfunite.exe"), Enumerable.Repeat(nativePdf, 17).Append(longPdf).ToArray());
+        var longUpdates = new List<OcrProgress>();
+        var longText = ocr.RecognizeAsync(longPdf, settings,
+            updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(longUpdates.Add), includePageHeadings: true).GetAwaiter().GetResult();
+        Check(longUpdates.Count(value => value.TextChunk is not null) == 17 && longUpdates.Last().TotalPages == 17 &&
+            longUpdates.Last().Percent == 100 && longText.Contains("Page 17 of 17") &&
+            !longUpdates.Any(value => value.Stage == OcrStage.Rendering),
+            "Long native PDFs deliver every numbered page and use the PDF's actual total without rendering scans");
+        var partial = new List<string>();
+        var failed = false;
+        try
+        {
+            ocr.RecognizeAsync(mixed, settings, updates: new AccessibleOCRStudio.Services.ImmediateProgress<OcrProgress>(update =>
+            {
+                if (update.Page == 3 && update.Stage == OcrStage.Rendering) throw new InvalidOperationException("Injected later-page failure");
+                if (update.TextChunk is not null) partial.Add(update.TextChunk);
+            }), includePageHeadings: true).GetAwaiter().GetResult();
+        }
+        catch (InvalidOperationException exception) { failed = exception.Message == "Injected later-page failure"; }
+        Check(failed && partial.Count == 2 && partial[0].Contains("quick brown fox") && partial[1].Contains("ExactNative123"),
+            "A later-page failure does not retract already delivered native or OCR text");
     }
 
     private static void MakeHybridPdf(string path, string? image, bool cropped = false, int rotation = 0)

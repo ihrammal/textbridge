@@ -1,4 +1,4 @@
-name: Windows build validation
+﻿name: Windows build validation
 on:
   workflow_dispatch:
   push:
@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    if: github.ref != 'refs/heads/codex/release-1.1.1'
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -60,12 +61,28 @@ jobs:
           ./scripts/test-installer.ps1 -ProductionPackage *>&1 | Tee-Object artifacts/installer-verification-ci.txt
           ./scripts/test-installer.ps1 -ProductionPackage -WindowsOnly *>&1 | Tee-Object artifacts/windows-ocr-installer-verification-ci.txt
           ./scripts/test-installer.ps1 -ProductionPackage -MachineWide -SkipLaunch *>&1 | Tee-Object artifacts/admin-installer-verification-ci.txt
+      - name: Upgrade the real published 1.1.0 installation
+        shell: pwsh
+        run: ./scripts/test-published-upgrade.ps1 *>&1 | Tee-Object artifacts/published-upgrade-verification-ci.txt
+      - name: Verify selective models and upgrade preservation
+        shell: pwsh
+        run: |
+          ./scripts/build-installer.ps1 -SelectiveInstall
+          ./scripts/test-selective-installer.ps1 *>&1 | Tee-Object artifacts/selective-installer-verification-ci.txt
+      - name: Record the tested artifact hashes
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content src/AccessibleOCRStudio/AccessibleOCRStudio.csproj
+          $version = [string]$project.Project.PropertyGroup.Version
+          @{ commit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;version=$version;installerSha256=(Get-FileHash "artifacts/TextBridge-Setup-$version.exe").Hash;applicationSha256=(Get-FileHash publish/TextBridge.dll).Hash } | ConvertTo-Json | Set-Content artifacts/tested-build.json
       - uses: actions/upload-artifact@v4
         with:
           name: TextBridge-win-x64
           path: |
             publish/
             artifacts/TextBridge-Setup-*.exe
+            !artifacts/*-QA.exe
+            artifacts/tested-build.json
           if-no-files-found: error
       - name: Preserve verification evidence
         if: always()
@@ -77,3 +94,30 @@ jobs:
             artifacts/*test.log
           if-no-files-found: warn
 
+
+  release:
+    needs: build
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/codex/release-1.1.1'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require successful clean-Windows validation on this exact commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $runs = gh run list --repo $env:GITHUB_REPOSITORY --workflow windows-build.yml --branch codex/release-1.1.1-qa --commit $env:GITHUB_SHA --status success --json databaseId,headSha --limit 1 | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or @($runs).Count -ne 1 -or $runs[0].headSha -ne $env:GITHUB_SHA) { throw 'No passing Windows QA run exists for this exact commit.' }
+          gh run download $runs[0].databaseId --repo $env:GITHUB_REPOSITORY --name TextBridge-win-x64 --dir .release-build
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to obtain the tested build.' }
+      - name: Publish tested maintenance release and verify public update feed
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/publish-tested-release.ps1

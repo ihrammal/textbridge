@@ -53,6 +53,11 @@ def engine(language, rotate):
             text_detection_model_name='PP-OCRv5_mobile_det', text_detection_model_dir=model_path('PP-OCRv5_mobile_det'),
             text_recognition_model_name=MODELNAMES[language], text_recognition_model_dir=model_path(MODELNAMES[language]),
             use_doc_orientation_classify=rotate, use_doc_unwarping=False, use_textline_orientation=False,
+            # The bundled v5 mobile detector is configured for a 960-pixel long
+            # edge. Explicitly cap detection instead of inheriting the generic
+            # pipeline's minimum-side setting, which kept full 300-dpi pages.
+            # Recognition still uses crops from the original-resolution image.
+            text_det_limit_side_len=960, text_det_limit_type='max',
             return_word_box=True, device='cpu', cpu_threads=4, enable_mkldnn=False, **kwargs)
     return ENGINES[key]
 

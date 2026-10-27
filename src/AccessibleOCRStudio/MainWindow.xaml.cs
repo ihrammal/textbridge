@@ -1,4 +1,4 @@
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
@@ -11,6 +11,7 @@ namespace AccessibleOCRStudio;
 public partial class MainWindow : Window
 {
     private static string AppVersion => typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
+    private static string UpdateVersion => typeof(MainWindow).Assembly.GetName().Version!.ToString(4);
     private readonly WelcomeService _welcome = new();
     private readonly LocalOcrService _ocr = new();
     private readonly ExportService _export = new();
@@ -30,6 +31,11 @@ public partial class MainWindow : Window
     private UIElement? _menuReturnFocus;
     private CancellationTokenSource? _apiCancellation;
     private bool _busy;
+    private CancellationTokenSource? _recognitionCancellation;
+    private TaskCompletionSource? _recognitionFinished;
+    private bool _stopPromptOpen;
+    private object? _recognitionOperation;
+    private RecognitionTextStream? _recognitionTextStream;
     private bool _updating;
     private bool _closing;
     private string _savedText = string.Empty;
@@ -41,10 +47,13 @@ public partial class MainWindow : Window
         foreach (var item in new[] { UndoMenu, RedoMenu, CutMenu, CopyMenu, PasteMenu, SelectAllMenu }) item.CommandTarget = DocumentText;
         DocumentText.CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, CopyOrCut_Executed, ClipboardCommand_CanExecute));
         DocumentText.CommandBindings.Add(new CommandBinding(ApplicationCommands.Cut, CopyOrCut_Executed, ClipboardCommand_CanExecute));
+        DocumentText.SelectionChanged += (_, _) => UpdatePageNavigation();
+        Closed += (_, _) => _recognitionTextStream?.Dispose();
         Deactivated += (_, _) => { _altPressed = false; _altUsedWithOtherKey = false; };
         Loaded += (_, _) => SystemParameters.StaticPropertyChanged += SystemAppearanceChanged;
         Unloaded += (_, _) => SystemParameters.StaticPropertyChanged -= SystemAppearanceChanged;
         SyncAccessibilityMenu();
+        UpdatePageNavigation();
     }
 
     private void SystemAppearanceChanged(object? sender, PropertyChangedEventArgs e)
@@ -58,6 +67,8 @@ public partial class MainWindow : Window
     private void CopyOrCut_Executed(object sender, ExecutedRoutedEventArgs e)
     {
         e.Handled = true;
+        if (e.Command == ApplicationCommands.Cut && DocumentText.IsReadOnly)
+        { StatusText.Text = UiLanguage.T("Text can be read, copied or saved during recognition. Editing is available when recognition finishes."); return; }
         if (DocumentText.SelectionLength == 0)
         {
             StatusText.Text = UiLanguage.T("Select text before using Cut or Copy.");
@@ -92,15 +103,30 @@ public partial class MainWindow : Window
         if (DialogGuard.Run(d.ShowDialog) == true)
         {
             if (!await ConfirmUnsavedTextAsync()) return;
-            _currentFile = d.FileName;
+            LoadDocument(d.FileName);
+        }
+    }
+
+    internal bool OpenStartupFile(string path)
+    {
+        var supported = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp" };
+        if (!System.IO.File.Exists(path) || !supported.Contains(System.IO.Path.GetExtension(path).ToLowerInvariant())) return false;
+        LoadDocument(System.IO.Path.GetFullPath(path));
+        return true;
+    }
+    private void LoadDocument(string path)
+    {
+            _currentFile = path;
             _lastTextSavePath = null;
             _lastRecognition = null;
             _lowConfidenceIndex = -1;
+            _recognitionTextStream?.Dispose(); _recognitionTextStream = null;
             DocumentText.Clear();
+            UpdatePageNavigation();
+            RecognitionProgressPanel.Visibility = Visibility.Collapsed;
             _savedText = string.Empty;
             StatusText.Text = $"Opened {System.IO.Path.GetFileName(_currentFile)}. Ready for recognition.";
             DocumentText.Focus();
-        }
     }
 
     private async void Recognize_Click(object sender, RoutedEventArgs e)
@@ -109,29 +135,69 @@ public partial class MainWindow : Window
         if (_currentFile is null) { DialogGuard.Show(this, ExperienceMessages.Get("openFirst", _settings.MessageLanguage), "TextBridge", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         if (!await ConfirmUnsavedTextAsync()) return;
         _busy = true;
+        using var cancellation = new CancellationTokenSource();
+        _recognitionCancellation = cancellation;
+        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _recognitionFinished = finished;
+        var operation = new object();
+        _recognitionOperation = operation;
+        var originalReadOnly = DocumentText.IsReadOnly;
+        DocumentText.IsReadOnly = false;
+        var snapshot = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(System.Text.Json.JsonSerializer.Serialize(_settings))!;
+        _recognitionTextStream?.Dispose();
+        var textStream = new RecognitionTextStream(DocumentText, snapshot.OcrLanguages, () => _settings.FollowRecognizedPages);
+        _recognitionTextStream = textStream;
+        textStream.Updated += UpdatePageNavigation;
+        UpdatePageNavigation();
+        using var presenter = new RecognitionProgressPresenter(StatusText, RecognitionProgressDetail, RecognitionProgress,
+            RecognitionProgressPanel, DocumentText, () => _settings, snapshot.MessageLanguage);
         StatusText.Text = ExperienceMessages.Get("started", _settings.MessageLanguage);
         try
         {
-            var progress = new Progress<string>(m => StatusText.Text = m);
-            _lastRecognition = await _ocr.RecognizeWithConfidenceAsync(_currentFile, _settings, progress);
-            DocumentText.Text = _lastRecognition.PlainText;
-            var firstLetter = DocumentText.Text.FirstOrDefault(char.IsLetter);
-            var rtl = firstLetter >= '\u0600' && firstLetter <= '\u06ff';
-            DocumentText.FlowDirection = rtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
-            DocumentText.Language = System.Windows.Markup.XmlLanguage.GetLanguage(rtl ? "ar" : _settings.OcrLanguages == "fra" ? "fr" : "en");
+            void Receive(OcrProgress update)
+            {
+                if (!Dispatcher.CheckAccess()) { Dispatcher.Invoke(() => Receive(update)); return; }
+                if (!ReferenceEquals(_recognitionOperation, operation) || cancellation.IsCancellationRequested) return;
+                presenter.Report(update);
+                if (update.TextChunk is not null)
+                {
+                    if (!textStream.HasChunks)
+                    {
+                        _lastRecognition = null;
+                        _lowConfidenceIndex = -1;
+                    }
+                    textStream.Append(update);
+                }
+            }
+            var input = _currentFile;
+            _lastRecognition = await Task.Run(() => _ocr.RecognizeWithConfidenceAsync(input, snapshot,
+                updates: new ImmediateProgress<OcrProgress>(Receive), includePageHeadings: true, cancellationToken: cancellation.Token));
             _lowConfidenceIndex = -1;
-            StatusText.Text = ExperienceMessages.Get(string.IsNullOrWhiteSpace(DocumentText.Text) ? "noText" : "complete", _settings.MessageLanguage);
-            DocumentText.CaretIndex = 0;
-            DocumentText.ScrollToHome();
-            DocumentText.Focus();
+            presenter.Dispose();
+            presenter.Finish(ExperienceMessages.Get(textStream.HasText ? "complete" : "noText", snapshot.MessageLanguage) + " " + presenter.CurrentMessage);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            presenter.Dispose();
+            presenter.Finish(UiLanguage.T("Recognition stopped. Completed pages remain in the editor."));
         }
         catch (Exception ex)
         {
-            StatusText.Text = ExperienceMessages.Get("failed", _settings.MessageLanguage);
-            DocumentText.Focus();
+            presenter.Dispose();
+            StatusText.Text = ExperienceMessages.Get("failed", snapshot.MessageLanguage) + (textStream.HasChunks ? " " + UiLanguage.T("Completed pages remain in the editor. Save them before trying again.") : "");
+            RecognitionProgressDetail.Text = StatusText.Text;
             DialogGuard.Show(this, ex.Message, "OCR Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        finally { _busy = false; }
+        finally
+        {
+            presenter.Dispose();
+            DocumentText.IsReadOnly = originalReadOnly;
+            _recognitionOperation = null;
+            _recognitionCancellation = null;
+            _recognitionFinished = null;
+            _busy = false;
+            finished.TrySetResult();
+        }
     }
 
     private async void OpenMultiple_Click(object sender, RoutedEventArgs e)
@@ -143,15 +209,25 @@ public partial class MainWindow : Window
         if (DialogGuard.Run(folder.ShowDialog) != true) return;
         var output = folder.FolderName;
         _busy = true;
+        using var cancellation = new CancellationTokenSource();
+        _recognitionCancellation = cancellation;
+        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _recognitionFinished = finished;
+        var snapshot = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(System.Text.Json.JsonSerializer.Serialize(_settings))!;
+        using var presenter = new RecognitionProgressPresenter(StatusText, RecognitionProgressDetail, RecognitionProgress,
+            RecognitionProgressPanel, DocumentText, () => _settings, snapshot.MessageLanguage);
         try
         {
-            var batch = new BatchService(); var progress = new Progress<string>(m => StatusText.Text = m);
-            var count = await batch.ConvertToTextAsync(d.FileNames, output, _settings, progress);
-            StatusText.Text = $"Batch conversion complete. {count} files exported to {output}.";
+            var batch = new BatchService();
+            var count = await Task.Run(() => batch.ConvertToTextAsync(d.FileNames, output, snapshot, updates: presenter, cancellationToken: cancellation.Token));
+            presenter.Dispose();
+            presenter.Finish($"Batch conversion complete. {count} files exported to {output}.");
             DocumentText.Focus();
         }
-        catch (Exception ex) { DialogGuard.Show(this, ex.Message, "Batch OCR Error", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { _busy = false; }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        { presenter.Finish(UiLanguage.T("Batch recognition stopped. Files already exported remain in the output folder.")); }
+        catch (Exception ex) { presenter.Dispose(); DialogGuard.Show(this, ex.Message, "Batch OCR Error", MessageBoxButton.OK, MessageBoxImage.Error); }
+        finally { presenter.Dispose(); _recognitionCancellation = null; _recognitionFinished = null; _busy = false; finished.TrySetResult(); }
     }
 
     private async void OpenAiCorrection_Click(object sender, RoutedEventArgs e)
@@ -244,7 +320,7 @@ public partial class MainWindow : Window
     {
         if (sender is MenuItem m && m.Tag is string lang)
         {
-            _settings.OcrLanguages = lang; _settings.Save();
+            _settings.OcrLanguages = lang; _settings.Save(); SyncAccessibilityMenu();
             StatusText.Text = $"OCR language profile set to {m.Header}.";
         }
     }
@@ -343,12 +419,28 @@ public partial class MainWindow : Window
     }
 
     private void Find_Click(object sender, RoutedEventArgs e) => ShowDialogReturningFocus(new FindReplaceWindow(DocumentText, false) { Owner = this });
-    private void Replace_Click(object sender, RoutedEventArgs e) => ShowDialogReturningFocus(new FindReplaceWindow(DocumentText, true) { Owner = this });
+    private void Replace_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy && _recognitionCancellation is null) { StatusText.Text = UiLanguage.T("Wait for the current operation to finish before editing."); return; }
+        ShowDialogReturningFocus(new FindReplaceWindow(DocumentText, true) { Owner = this });
+    }
 
     private void SyncAccessibilityMenu()
     {
+        void MarkLanguages(ItemsControl parent)
+        {
+            foreach (var item in parent.Items.OfType<MenuItem>())
+            {
+                if (item.Tag is string profile && new[] { "ara", "eng", "fra", "ara+eng", "ara+fra", "eng+fra", "ara+eng+fra" }.Contains(profile))
+                { item.IsCheckable = true; item.IsChecked = profile == _settings.OcrLanguages; }
+                if (item.HasItems) MarkLanguages(item);
+            }
+        }
+        MarkLanguages(ApplicationMenu);
         System.Windows.Automation.AutomationProperties.SetLiveSetting(StatusText, _settings.AnnounceOcrProgress ? System.Windows.Automation.AutomationLiveSetting.Polite : System.Windows.Automation.AutomationLiveSetting.Off);
+        System.Windows.Automation.AutomationProperties.SetLiveSetting(RecognitionProgressDetail, _settings.AnnounceOcrProgress ? System.Windows.Automation.AutomationLiveSetting.Polite : System.Windows.Automation.AutomationLiveSetting.Off);
         StatusText.Language = System.Windows.Markup.XmlLanguage.GetLanguage(ExperienceMessages.Language(_settings.MessageLanguage));
+        RecognitionProgressDetail.Language = StatusText.Language;
         // UI Automation and system contrast remain available to every user.
         ReadingAppearance.Apply(this, _settings);
         ReadingAppearance.ApplyDocument(DocumentText, _settings);
@@ -358,6 +450,8 @@ public partial class MainWindow : Window
     private string SuggestedName(string ext) => (_currentFile is null ? "recognized-document" : System.IO.Path.GetFileNameWithoutExtension(_currentFile)) + "." + ext;
     private void Help_Click(object s, RoutedEventArgs e) => OpenDoc("help/index.html");
     private void Shortcuts_Click(object s, RoutedEventArgs e) => OpenDoc("help/shortcuts.html");
+    private void OfflineHelp_Click(object s, RoutedEventArgs e) => OpenDoc("help/offline-and-api.html");
+    private void TroubleshootingHelp_Click(object s, RoutedEventArgs e) => OpenDoc("help/troubleshooting.html");
     private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await UpdateApplicationAsync(true);
 
     private async Task UpdateApplicationAsync(bool showResult)
@@ -369,7 +463,7 @@ public partial class MainWindow : Window
         try
         {
             StatusText.Text = UiLanguage.T("Checking for updates.");
-            var result = await _updates.CheckAsync(_settings.UpdateFeedUrl, AppVersion);
+            var result = await _updates.CheckAsync(_settings.UpdateFeedUrl, UpdateVersion);
             if (_closing || _allowClose) return;
             StatusText.Text = UiLanguage.T(result.Message);
             if (!result.UpdateAvailable)
@@ -377,8 +471,11 @@ public partial class MainWindow : Window
                 if (showResult) DialogGuard.Show(this, result.Message, "TextBridge Updates");
                 return;
             }
+            var correctedBuild = Version.TryParse(result.LatestVersion, out var latest) && latest.Build >= 0 && latest.ToString(3) == AppVersion;
             var consent = DialogGuard.Show(this,
-                UiLanguage.T("Version {0} is available. Download and install it now? Your work will be saved or reviewed before installation. Windows may ask for administrator permission.").Replace("{0}", result.LatestVersion),
+                UiLanguage.T(correctedBuild
+                    ? "A corrected build of version {0} is available. Download and install it now? Your work will be saved or reviewed before installation. Windows may ask for administrator permission."
+                    : "Version {0} is available. Download and install it now? Your work will be saved or reviewed before installation. Windows may ask for administrator permission.").Replace("{0}", correctedBuild ? AppVersion : result.LatestVersion),
                 UiLanguage.T("TextBridge Updates"), MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
             if (consent != MessageBoxResult.Yes) { StatusText.Text = UiLanguage.T("Update cancelled. Nothing was downloaded or installed."); return; }
             StatusText.Text = UiLanguage.T("Downloading update.");
@@ -391,11 +488,8 @@ public partial class MainWindow : Window
             ApplicationMenu.IsEnabled = false;
             if (!await ConfirmUnsavedTextAsync()) return;
             StatusText.Text = UiLanguage.T("Installing update.");
-            var start = new ProcessStartInfo(installer) { UseShellExecute = true, Verb = "runas" };
-            start.ArgumentList.Add("/SILENT");
-            start.ArgumentList.Add("/NORESTART");
-            start.ArgumentList.Add("/NOCLOSEAPPLICATIONS");
-            start.ArgumentList.Add("/DIR=" + AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar));
+            var start = UpdateInstaller.CreateStartInfo(installer, AppContext.BaseDirectory,
+                UpdateInstaller.IsCurrentUserInstall(AppContext.BaseDirectory));
             if (Process.Start(start) is null) throw new IOException("The installer could not be started.");
             _allowClose = true;
             Close();
@@ -431,6 +525,7 @@ public partial class MainWindow : Window
 
     private void LinearizeTable_Click(object sender, RoutedEventArgs e)
     {
+        if (_busy && _recognitionCancellation is null) { StatusText.Text = UiLanguage.T("Wait for the current operation to finish before editing."); return; }
         var selected = DocumentText.SelectedText;
         if (string.IsNullOrWhiteSpace(selected))
         {
@@ -462,6 +557,36 @@ public partial class MainWindow : Window
         StatusText.Text = UiLanguage.T($"Text to check {_lowConfidenceIndex + 1} of {words.Count}: {word.Text}. Recognition confidence: {word.Confidence:0} percent.");
     }
 
+    private void LatestRecognizedPage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_recognitionTextStream?.HasChunks != true)
+        { StatusText.Text = UiLanguage.T("No completed page is available yet."); return; }
+        _recognitionTextStream.GoToLatestPage();
+        DocumentText.Focus();
+    }
+
+    private void PreviousPage_Click(object sender, RoutedEventArgs e) => MoveRecognizedPage(-1);
+    private void NextPage_Click(object sender, RoutedEventArgs e) => MoveRecognizedPage(1);
+    private void MoveRecognizedPage(int direction)
+    {
+        if (_recognitionTextStream?.MovePage(direction) != true)
+        {
+            StatusText.Text = UiLanguage.T(_recognitionTextStream?.HasChunks == true
+                ? "There is no other completed page in that direction." : "No completed page is available yet.");
+            return;
+        }
+        DocumentText.Focus();
+    }
+    private void UpdatePageNavigation()
+    {
+        if (_recognitionTextStream?.HasChunks != true)
+        { ReadingPageStatus.Text = UiLanguage.T("No completed page is available yet."); return; }
+        ReadingPageStatus.Text = UiLanguage.T("Reading page {0} of {1}. {2} completed pages available.")
+            .Replace("{0}", _recognitionTextStream.CurrentPageNumber.ToString())
+            .Replace("{1}", _recognitionTextStream.TotalPages.ToString())
+            .Replace("{2}", _recognitionTextStream.AvailablePages.ToString());
+    }
+
     private void FocusDocument_Click(object sender, RoutedEventArgs e) => DocumentText.Focus();
     private void FocusStatus_Click(object sender, RoutedEventArgs e)
     {
@@ -481,6 +606,14 @@ public partial class MainWindow : Window
     {
         var window = new SettingsWindow(_settings) { Owner = this };
         window.OpenLowVision();
+        if (ShowDialogReturningFocus(window) == true)
+        { UiLanguage.Configure(_settings); UiLanguage.Apply(this); SyncAccessibilityMenu(); }
+    }
+
+    private void AccessibilitySettings_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new SettingsWindow(_settings) { Owner = this };
+        window.OpenAccessibility();
         if (ShowDialogReturningFocus(window) == true)
         { UiLanguage.Configure(_settings); UiLanguage.Apply(this); SyncAccessibilityMenu(); }
     }
@@ -545,18 +678,15 @@ public partial class MainWindow : Window
             return;
         }
         if (_altPressed) _altUsedWithOtherKey = true;
-        // Tab visits the document and status; only Alt/F10/mnemonics enter the menu.
-        if (key == Key.Tab && !IsMenuActive &&
-            (Keyboard.Modifiers == ModifierKeys.None || Keyboard.Modifiers == ModifierKeys.Shift))
-        {
-            if (_settings.ShowStatusBar && DocumentText.IsKeyboardFocusWithin) StatusText.Focus();
-            else DocumentText.Focus();
-            e.Handled = true;
-            return;
-        }
         if (key == Key.Escape && IsMenuActive)
         {
             CloseMenuLevel(); e.Handled = true; return;
+        }
+        if (key == Key.Escape && Keyboard.Modifiers == ModifierKeys.None && _recognitionCancellation is not null)
+        {
+            e.Handled = true;
+            _ = ConfirmStopRecognitionAsync(false);
+            return;
         }
         if (key == Key.F10 && Keyboard.Modifiers == ModifierKeys.None)
         {
@@ -574,13 +704,23 @@ public partial class MainWindow : Window
         else if (ctrl && e.Key == Key.OemComma) { Preferences_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F6 && Keyboard.Modifiers == ModifierKeys.Shift) { FocusStatus_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F6 && Keyboard.Modifiers == ModifierKeys.None) { FocusDocument_Click(sender, e); e.Handled = true; }
+        else if (e.Key == Key.F7 && Keyboard.Modifiers == ModifierKeys.None) { LatestRecognizedPage_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F1) { Help_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F4 && shift) { PreviousLowConfidence_Click(sender, e); e.Handled = true; }
         else if (e.Key == Key.F4) { NextLowConfidence_Click(sender, e); e.Handled = true; }
     }
 
     private void About_Click(object s, RoutedEventArgs e) => ShowDialogReturningFocus(new AuthorInformationWindow { Owner = this });
-    private void OpenDoc(string rel) { if (UiLanguage.IsArabic) rel = rel.Replace("help/", "help/ar/"); var p = System.IO.Path.Combine(AppContext.BaseDirectory, rel); if (System.IO.File.Exists(p)) Process.Start(new ProcessStartInfo(p) { UseShellExecute = true }); else DialogGuard.Show(this, "Help file is not installed yet."); }
+    private void OpenDoc(string rel)
+    {
+        if (UiLanguage.IsArabic) rel = rel.Replace("help/", "help/ar/");
+        var path = System.IO.Path.Combine(AppContext.BaseDirectory, rel);
+        if (!System.IO.File.Exists(path))
+        { DialogGuard.Show(this, UiLanguage.T("Help file is not installed yet.")); return; }
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+        catch (Exception)
+        { DialogGuard.Show(this, UiLanguage.T("The help page could not be opened. Open the help folder beside TextBridge.exe and choose index.html."), UiLanguage.T("Help Contents"), MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
     private async void Exit_Click(object s, RoutedEventArgs e) { await CloseWithFarewellAsync(); }
     private async void Window_Closing(object? s, CancelEventArgs e) { if (_allowClose) return; e.Cancel = true; await CloseWithFarewellAsync(); }
     private async Task<bool> ConfirmUnsavedTextAsync()
@@ -592,13 +732,35 @@ public partial class MainWindow : Window
         return answer == MessageBoxResult.No || (answer == MessageBoxResult.Yes && await SaveDocumentTextAsync() && !HasUnsavedText);
     }
 
+    private async Task<bool> ConfirmStopRecognitionAsync(bool exiting)
+    {
+        var cancellation = _recognitionCancellation;
+        var finished = _recognitionFinished;
+        if (cancellation is null || finished is null) return true;
+        if (_stopPromptOpen) return false;
+        _stopPromptOpen = true;
+        try
+        {
+            var answer = DialogGuard.Show(this, UiLanguage.T(exiting
+                ? "Stop recognition and exit? Completed pages can be saved before closing. Choose No or Cancel to continue recognition."
+                : "Stop recognition? Completed pages will remain available. Choose No or Cancel to continue recognition."),
+                UiLanguage.T("Stop recognition"), MessageBoxButton.YesNoCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+            if (answer != MessageBoxResult.Yes) return false;
+            if (!finished.Task.IsCompleted) cancellation.Cancel();
+            await finished.Task;
+            return true;
+        }
+        finally { _stopPromptOpen = false; }
+    }
+
     private async Task CloseWithFarewellAsync()
     {
         if (_allowClose || _closing) return;
-        if (_busy) { StatusText.Text = "Wait for the current conversion to finish before closing."; return; }
         _closing = true;
         try
         {
+            if (_recognitionCancellation is not null && !await ConfirmStopRecognitionAsync(true)) return;
+            if (_busy) { StatusText.Text = UiLanguage.T("Wait for the current conversion to finish before closing."); return; }
             if (!await ConfirmUnsavedTextAsync()) return;
             IsEnabled = false;
             StatusText.Text = ExperienceMessages.Get("goodbye", _settings.MessageLanguage);

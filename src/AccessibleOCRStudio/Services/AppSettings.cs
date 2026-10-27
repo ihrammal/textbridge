@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace AccessibleOCRStudio.Services;
 
@@ -10,7 +10,12 @@ public sealed class AppSettings
     public bool PlayStartupSound { get; set; } = true;
     public bool PlayExitSound { get; set; } = true;
     public bool ShowWelcomeMessage { get; set; } = true;
+    public bool FollowRecognizedPages { get; set; } = true;
     public bool AnnounceOcrProgress { get; set; } = true;
+    // Zero means each completed page. Timed modes also report slow-page activity.
+    public int ProgressAnnouncementSeconds { get; set; } = 10;
+    public static int NormalizeProgressInterval(int seconds) =>
+        new[] { 0, 5, 10, 15, 30, 60 }.Contains(seconds) ? seconds : 10;
     public bool ShowStatusBar { get; set; } = false;
     public string DocumentFontFamily { get; set; } = "Segoe UI";
     public double DocumentFontSize { get; set; } = 18;
@@ -70,6 +75,7 @@ public sealed class AppSettings
                 MigrateFromLegacy(LegacyAppDataRoot, AppDataRoot, "settings.json");
             }
             var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new();
+            settings.ProgressAnnouncementSeconds = NormalizeProgressInterval(settings.ProgressAnnouncementSeconds);
             if (string.IsNullOrWhiteSpace(settings.UpdateFeedUrl)) settings.UpdateFeedUrl = new AppSettings().UpdateFeedUrl;
             if (string.IsNullOrWhiteSpace(settings.GitHubRepositoryUrl)) settings.GitHubRepositoryUrl = new AppSettings().GitHubRepositoryUrl;
             // Use the canonical repository after its rename; preserve custom feeds.
@@ -86,6 +92,11 @@ public sealed class AppSettings
             {
                 var profiles=WindowsOcrService.AvailableProfiles;
                 if(profiles.Count>0)settings.OcrLanguages=string.Join("+",profiles);
+            }
+            if (OcrBackendService.ResolveEngine(settings) == "paddle")
+            {
+                var profiles = PaddleOcrService.InstalledProfiles();
+                if (profiles.Length > 0) settings.OcrLanguages = string.Join("+", profiles);
             }
             return settings;
         }

@@ -34,6 +34,7 @@ public partial class App : Application
             MainWindow = main;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             main.Show();
+            if (e.Args.Length == 1) main.OpenStartupFile(e.Args[0]);
         }
         catch (Exception ex)
         {

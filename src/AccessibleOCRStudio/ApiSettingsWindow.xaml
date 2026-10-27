@@ -9,7 +9,7 @@
 <TextBlock x:Name="ProviderSelectionStatus" Focusable="True" TextWrapping="Wrap" AutomationProperties.Name="{Binding Text, RelativeSource={RelativeSource Self}}" AutomationProperties.LiveSetting="Polite" Margin="0,3"/>
 <TextBlock x:Name="ProviderNotice" TextWrapping="Wrap" Margin="0,6"/><TextBlock Text="Save the selected provider before switching to another one. Each provider has its own saved key and model. Custom providers are not available." TextWrapping="Wrap"/>
 <TextBlock x:Name="ApiKeyLabel" Text="Your provider API key" Margin="0,12,0,0"/><PasswordBox x:Name="ApiKey" Margin="0,5" AutomationProperties.Name="API key"/>
-<Button x:Name="CreateApiKey" Content="_Create API key (opens provider website)" HorizontalAlignment="Left" Margin="0,5" Padding="8,4" Click="CreateApiKey_Click"/>
+<Button x:Name="CreateApiKey" Content="Create API _key (opens provider website)" HorizontalAlignment="Left" Margin="0,5" Padding="8,4" Click="CreateApiKey_Click"/>
 <TextBlock Text="Create your own key on the selected provider website, then paste it here. TextBridge does not provide a shared key. Keys are protected for your Windows user and are not stored in settings.json. Clear the field and Save to remove the selected provider's saved key." TextWrapping="Wrap" Margin="0,8"/>
 <TextBlock Text="Provider model ID" Margin="0,8,0,0"/><TextBox x:Name="ModelId" AutomationProperties.Name="Provider model ID" Margin="0,5"/>
 <Button x:Name="TestApiKey" Content="_Test API key" HorizontalAlignment="Left" Margin="0,5" Padding="8,4" Click="TestApiKey_Click"/>

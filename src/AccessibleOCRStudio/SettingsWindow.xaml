@@ -1,20 +1,21 @@
-<Window x:Class="AccessibleOCRStudio.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="TextBridge Settings" Height="600" Width="720" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+<Window x:Class="AccessibleOCRStudio.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="TextBridge Settings" Height="600" Width="720" MinHeight="360" MinWidth="360" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
 <Grid Margin="16"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 <TabControl x:Name="Tabs" AutomationProperties.Name="Settings categories">
-<TabItem Header="General"><StackPanel Margin="12"><TextBlock Text="Interface language / لغة الواجهة"/><ComboBox x:Name="InterfaceLanguage" AutomationProperties.Name="Interface language / لغة الواجهة" Margin="0,8"><ComboBoxItem Content="Windows language / لغة Windows" Tag="auto"/><ComboBoxItem Content="العربية" Tag="ar"/><ComboBoxItem Content="English" Tag="en"/></ComboBox><TextBlock Text="Language changes apply as soon as you save." TextWrapping="Wrap"/></StackPanel></TabItem><TabItem Header="Accessibility"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12">
-<CheckBox x:Name="ScreenReader" Content="Screen reader support is always enabled" IsEnabled="False" Margin="0,5"/>
-<CheckBox x:Name="AnnounceProgress" Content="Announce OCR progress" Margin="0,5"/>
+<TabItem Header="General"><StackPanel Margin="12"><TextBlock Text="Interface language / لغة الواجهة"/><ComboBox x:Name="InterfaceLanguage" AutomationProperties.Name="Interface language / لغة الواجهة" Margin="0,8"><ComboBoxItem Content="Windows language / لغة Windows" Tag="auto"/><ComboBoxItem Content="العربية" Tag="ar"/><ComboBoxItem Content="English" Tag="en"/></ComboBox><TextBlock Text="Language changes apply as soon as you save." TextWrapping="Wrap"/></StackPanel></TabItem><TabItem x:Name="AccessibilityTab" Header="Accessibility"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="12">
+<TextBlock Text="Screen-reader and low-vision options are together here. Choose a section below or use Tab to move through its controls." TextWrapping="Wrap" Margin="0,0,0,8"/>
+<UniformGrid Columns="3" Margin="0,0,0,10"><Button AutomationProperties.Name="Screen-reader options" Margin="0,4,4,4" Padding="8,5" MinHeight="40" Click="ScreenReaderOptions_Click"><TextBlock Text="Screen-reader options" TextWrapping="Wrap"/></Button><Button AutomationProperties.Name="Low-vision options" Margin="4" Padding="8,5" MinHeight="40" Click="LowVisionOptions_Click"><TextBlock Text="Low-vision options" TextWrapping="Wrap"/></Button><Button AutomationProperties.Name="Sounds and messages" Margin="4,4,0,4" Padding="8,5" MinHeight="40" Click="SoundOptions_Click"><TextBlock Text="Sounds and messages" TextWrapping="Wrap"/></Button></UniformGrid>
+<GroupBox x:Name="ScreenReaderGroup" Header="Screen reader and keyboard" Margin="0,0,0,12" Padding="10"><StackPanel>
+<TextBlock Text="Screen reader support is always enabled" TextWrapping="Wrap"/>
+<CheckBox x:Name="FollowPages" Content="Move reading position to each newly recognized page" Margin="0,8"/><TextBlock Text="Leave this off to keep your reading position. Press F7 to go to the latest completed page whenever you want." TextWrapping="Wrap"/>
+<CheckBox x:Name="AnnounceProgress" Content="Announce OCR progress" Margin="0,8"/>
+<Label Target="{Binding ElementName=AnnouncementInterval}" Padding="0"><TextBlock Text="Progress announcement frequency" TextWrapping="Wrap"/></Label>
+<ComboBox x:Name="AnnouncementInterval" AutomationProperties.Name="Progress announcement frequency" IsEnabled="{Binding IsChecked, ElementName=AnnounceProgress}" Margin="0,5,0,8"><ComboBoxItem Content="Every completed page" Tag="0"/><ComboBoxItem Content="Every 5 seconds" Tag="5"/><ComboBoxItem Content="Every 10 seconds" Tag="10"/><ComboBoxItem Content="Every 15 seconds" Tag="15"/><ComboBoxItem Content="Every 30 seconds" Tag="30"/><ComboBoxItem Content="Every 60 seconds" Tag="60"/></ComboBox>
+<TextBlock Text="Timed announcements continue during a slow page. Each completed page is added to the editor immediately. Page-by-page announcements wait for a page to finish." TextWrapping="Wrap" Margin="0,0,0,8"/>
 <CheckBox x:Name="ShowStatusBar" Content="Show status bar" Margin="0,5"/>
-<CheckBox x:Name="AccessibleReading" Content="Accessible reading mode (larger document text and spacing)" Margin="0,5"/>
-<CheckBox x:Name="HighContrast" Content="Windows high contrast is used automatically" IsEnabled="False" Margin="0,5"/>
-<CheckBox x:Name="StartupSound" Content="Play startup sound" Margin="0,5"/>
-<CheckBox x:Name="ExitSound" Content="Play exit sound" Margin="0,5"/>
-<TextBlock Text="Welcome, goodbye and recognition message language" Margin="0,12,0,0"/>
-<ComboBox x:Name="MessageLanguage" AutomationProperties.Name="Welcome, goodbye and recognition message language" Margin="0,5"><ComboBoxItem Content="Windows language / لغة Windows / Langue Windows" Tag="auto"/><ComboBoxItem Content="العربية" Tag="ar"/><ComboBoxItem Content="English" Tag="en"/><ComboBoxItem Content="Français" Tag="fr"/></ComboBox>
-
-<CheckBox x:Name="WelcomeMessage" Content="Show welcome message" Margin="0,5"/>
-</StackPanel></ScrollViewer></TabItem>
-<TabItem x:Name="LowVisionTab" Header="Low vision"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12">
+<TextBlock Text="Press Shift+F6 to review the current status even when the bar is hidden. F6 returns to your document. Alt or F10 opens the menus." TextWrapping="Wrap" Margin="0,5"/>
+</StackPanel></GroupBox>
+<GroupBox x:Name="LowVisionGroup" Header="Low vision and reading appearance" Margin="0,0,0,12" Padding="10"><StackPanel>
+<CheckBox x:Name="AccessibleReading" Content="Accessible reading mode (larger document text and spacing)" Margin="0,5,0,12"/>
 <TextBlock Text="Document font"/><ComboBox x:Name="DocumentFont" AutomationProperties.Name="Document font" Margin="0,5,0,12" SelectionChanged="Appearance_Changed"><ComboBoxItem Content="Segoe UI" Tag="Segoe UI"/><ComboBoxItem Content="Arial" Tag="Arial"/><ComboBoxItem Content="Tahoma" Tag="Tahoma"/><ComboBoxItem Content="Verdana" Tag="Verdana"/><ComboBoxItem Content="Calibri" Tag="Calibri"/><ComboBoxItem Content="Consolas" Tag="Consolas"/></ComboBox>
 <TextBlock Text="Document font size (points)"/><ComboBox x:Name="DocumentSize" IsEditable="True" AutomationProperties.Name="Document font size (points)" Margin="0,5,0,12" SelectionChanged="Appearance_Changed" LostKeyboardFocus="Appearance_Changed"><ComboBoxItem Content="12"/><ComboBoxItem Content="14"/><ComboBoxItem Content="16"/><ComboBoxItem Content="18"/><ComboBoxItem Content="20"/><ComboBoxItem Content="24"/><ComboBoxItem Content="28"/><ComboBoxItem Content="32"/><ComboBoxItem Content="40"/><ComboBoxItem Content="48"/><ComboBoxItem Content="60"/><ComboBoxItem Content="72"/></ComboBox>
 <CheckBox x:Name="BoldDocument" Content="Bold document text" Margin="0,5,0,12" Click="Appearance_Changed"/>
@@ -22,10 +23,20 @@
 <TextBlock Text="Colour contrast"/><ComboBox x:Name="ReadingColors" AutomationProperties.Name="Colour contrast" Margin="0,5,0,8" SelectionChanged="Appearance_Changed"><ComboBoxItem Content="Windows default" Tag="system"/><ComboBoxItem Content="Black on white" Tag="light"/><ComboBoxItem Content="White on black" Tag="dark"/><ComboBoxItem Content="Yellow on black" Tag="yellow"/><ComboBoxItem Content="Black on cream" Tag="cream"/></ComboBox>
 <TextBlock Text="Windows high contrast takes priority over custom colours." TextWrapping="Wrap" Margin="0,0,0,12"/>
 <TextBlock Text="Preview"/><Border BorderBrush="Gray" BorderThickness="1" Margin="0,5" Padding="12"><TextBlock x:Name="AppearancePreview" Text="Readable text — نص واضح — Texte lisible" TextWrapping="Wrap" AutomationProperties.Name="Reading appearance preview"/></Border>
+
+</StackPanel></GroupBox>
+<GroupBox x:Name="SoundsGroup" Header="Sounds and messages" Margin="0,0,0,12" Padding="10"><StackPanel>
+<TextBlock Text="Turn off sounds if they interrupt your screen reader. Message language is separate from the interface and document languages." TextWrapping="Wrap" Margin="0,0,0,8"/>
+<CheckBox x:Name="StartupSound" Content="Play startup sound" Margin="0,5"/>
+<CheckBox x:Name="ExitSound" Content="Play exit sound" Margin="0,5"/>
+<CheckBox x:Name="WelcomeMessage" Content="Show welcome message" Margin="0,5"/>
+<Label Content="Welcome, goodbye and recognition message language" Target="{Binding ElementName=MessageLanguage}" Padding="0" Margin="0,12,0,0"/>
+<ComboBox x:Name="MessageLanguage" AutomationProperties.Name="Welcome, goodbye and recognition message language" Margin="0,5"><ComboBoxItem Content="Windows language / لغة Windows / Langue Windows" Tag="auto"/><ComboBoxItem Content="العربية" Tag="ar"/><ComboBoxItem Content="English" Tag="en"/><ComboBoxItem Content="Français" Tag="fr"/></ComboBox>
+</StackPanel></GroupBox>
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="OCR"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12">
 <TextBlock Text="Recognition engine"/><ComboBox x:Name="OcrEngine" AutomationProperties.Name="Recognition engine" Margin="0,5"><ComboBoxItem Content="PaddleOCR" Tag="paddle"/><ComboBoxItem Content="Windows OCR" Tag="windows"/></ComboBox>
-<TextBlock x:Name="EngineHint" TextWrapping="Wrap" Margin="0,5,0,12"/>
+<TextBlock AutomationProperties.LiveSetting="Polite" x:Name="EngineHint" TextWrapping="Wrap" Margin="0,5,0,12"/>
 <TextBlock Text="Default OCR language profile"/><ComboBox x:Name="Languages" Margin="0,5,0,12" AutomationProperties.Name="Default OCR language profile"><ComboBoxItem Content="Arabic" Tag="ara"/><ComboBoxItem Content="English" Tag="eng"/><ComboBoxItem Content="French" Tag="fra"/><ComboBoxItem Content="Arabic + English" Tag="ara+eng"/><ComboBoxItem Content="Arabic + French" Tag="ara+fra"/><ComboBoxItem Content="English + French" Tag="eng+fra"/><ComboBoxItem Content="Arabic + English + French" Tag="ara+eng+fra"/></ComboBox>
 <CheckBox x:Name="PreserveLayout" Content="Keep line breaks and spacing in recognized text and exports" Margin="0,5"/><TextBlock Text="Word keeps headings and paragraphs; HTML keeps spacing. Searchable PDF keeps the original page appearance. Complex tables may need manual editing." TextWrapping="Wrap"/><CheckBox x:Name="PreferDigital" Content="Use existing PDF text when available" Margin="0,5"/>
 <CheckBox x:Name="AutoRotate" Content="Automatic orientation assistance" Margin="0,5"/>
@@ -34,7 +45,7 @@
 </StackPanel></ScrollViewer></TabItem>
 <TabItem Header="Updates"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="12"><TextBlock Text="Update feed address (HTTPS)"/><TextBox x:Name="UpdateFeed" AutomationProperties.Name="Update feed address (HTTPS)" Margin="0,8" FlowDirection="LeftToRight"/><CheckBox x:Name="CheckUpdates" Content="Check for updates when TextBridge starts" Margin="0,5"/><TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Text="When you accept an available update, TextBridge downloads and installs it automatically. Save your work before installation. Update checks never send document content."/></StackPanel></ScrollViewer></TabItem>
 </TabControl>
-<StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0"><Button Content="Save" Width="90" Margin="4" IsDefault="True" Click="Save_Click"/><Button Content="Cancel" Width="90" Margin="4" IsCancel="True"/></StackPanel>
+<WrapPanel Grid.Row="1" HorizontalAlignment="Right" Margin="0,12,0,0"><Button Content="Save" MinWidth="90" Padding="12,6" Margin="4" IsDefault="True" Click="Save_Click"/><Button Content="Cancel" MinWidth="90" Padding="12,6" Margin="4" IsCancel="True"/></WrapPanel>
 </Grid></Window>
 
 
