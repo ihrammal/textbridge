@@ -28,7 +28,15 @@ try {
     foreach ($model in @('arabic_PP-OCRv5_mobile_rec','en_PP-OCRv5_mobile_rec','latin_PP-OCRv5_mobile_rec')) {
         if (-not (Test-Path "$target\paddle\models\$model\inference.pdiparams")) { throw "Upgrade lost $model" }
     }
-    if ((Get-Item "$target\TextBridge.exe").VersionInfo.ProductVersion.Trim() -ne $version) { throw 'Upgrade did not replace the application version.' }
+    $ActualVersion = (Get-Item "$target\TextBridge.exe").VersionInfo
+    $ExpectedBuild = [string]$project.Project.PropertyGroup.FileVersion
+    # SDK builds in a Git checkout append the source revision to ProductVersion.
+    if ($ActualVersion.ProductVersion.Trim().Split('+')[0] -ne $version -or $ActualVersion.FileVersion.Trim() -ne $ExpectedBuild) {
+        throw "Upgrade metadata mismatch: product=$($ActualVersion.ProductVersion), build=$($ActualVersion.FileVersion); expected $version / $ExpectedBuild"
+    }
+    foreach ($Binary in @('TextBridge.exe','TextBridge.dll')) {
+        if ((Get-FileHash (Join-Path $target $Binary)).Hash -ne (Get-FileHash (Join-Path $root "publish/$Binary")).Hash) { throw "Upgrade did not install the tested $Binary" }
+    }
     $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($subkey)
     try { if ($null -eq $key -or $key.GetValue('DisplayVersion') -ne $version) { throw 'Upgrade registration is incorrect.' } } finally { if ($key) { $key.Dispose() } }
     Write-Output 'PASS: Real published 1.1.0 upgrades to the candidate with all language models and per-user registration retained.'
