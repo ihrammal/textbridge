@@ -62,8 +62,8 @@ UsePreviousAppDir=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
 [Files]
-Source: "..\publish\*"; DestDir: "{app}"; Excludes: "paddle,paddle\*,ClearRead.*,ClearRead-LICENSE.txt"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\publish\paddle\*"; DestDir: "{app}\paddle"; Excludes: "models,models\*"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: paddle
+Source: "..\publish\*"; DestDir: "{app}"; Excludes: "\paddle,\paddle\*,ClearRead.*,ClearRead-LICENSE.txt"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\publish\paddle\*"; DestDir: "{app}\paddle"; Excludes: "\models,\models\*"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: paddle
 Source: "LICENSE.txt"; DestName: "TextBridge-License.txt"; Flags: dontcopy
 Source: "..\publish\paddle\models\arabic_PP-OCRv5_mobile_rec\*"; DestDir: "{app}\paddle\models\arabic_PP-OCRv5_mobile_rec"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: paddle\arabic
 Source: "..\publish\paddle\models\en_PP-OCRv5_mobile_rec\*"; DestDir: "{app}\paddle\models\en_PP-OCRv5_mobile_rec"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: paddle\english

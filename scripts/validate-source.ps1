@@ -20,6 +20,7 @@ $installer = Get-Content (Join-Path $Root 'installer\AccessibleOCRStudio.iss') -
 if ($installer -notmatch ('MyAppVersion "' + [regex]::Escape($Version) + '"')) { throw 'Installer and application versions differ.' }
 $Build = [string]$project.Project.PropertyGroup.AssemblyVersion
 if ($Build -and $installer -notmatch ('MyAppBuild "' + [regex]::Escape($Build) + '"')) { throw 'Installer and application build numbers differ.' }
+if (-not $installer.Contains('Excludes: "\models,\models\*"')) { throw 'Optional model exclusion must be rooted; nested Python model packages are required runtime files.' }
 $conflicts = @()
 foreach ($file in Get-ChildItem (Join-Path $Root 'src\AccessibleOCRStudio') -Recurse -Include *.cs, *.xaml) {
     foreach ($hit in Select-String -Path $file.FullName -Pattern 'Key\.(Insert|CapsLock|LWin|RWin|LeftShift|RightShift|LeftCtrl|RightCtrl)\b') {
